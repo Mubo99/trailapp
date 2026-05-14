@@ -1,0 +1,1193 @@
+const regions = ["Төв оффис", "Улаанбаатар салбар", "Дархан салбар", "Эрдэнэт салбар", "Агуулах"];
+
+const productCatalog = [
+  { name: "Цай 500гр", price: 25000 },
+  { name: "Кофе 1кг", price: 42000 },
+  { name: "Ундаа 1л", price: 3500 },
+  { name: "Печень 400гр", price: 6800 },
+  { name: "Ус 0.5л", price: 1200 },
+  { name: "Чихэр 1кг", price: 18500 },
+];
+
+const salesTargets = {
+  Бат: 12000000,
+  Саруул: 10000000,
+  bat: 8000000,
+};
+
+const defaultProfiles = {
+  Бат: { name: "Бат", email: "bat@batmon.mn", phone: "99110011", age: 29, role: "Борлуулагч", photo: "./assets/batmon-icon.png" },
+  Саруул: { name: "Саруул", email: "saruul@batmon.mn", phone: "99220022", age: 27, role: "Борлуулагч", photo: "./assets/batmon-icon.png" },
+  bat: { name: "bat", email: "bat@batmon.mn", phone: "99000000", age: 30, role: "Нягтлан", photo: "./assets/batmon-icon.png" },
+};
+
+const demoState = {
+  currentUser: null,
+  activeTab: "time",
+  selectedPayment: "bank",
+  selectedSalesperson: "all",
+  selectedTimeEmployee: "all",
+  accountantTimeMode: "mine",
+  draftCustomer: "",
+  draftItems: [],
+  monthlyTarget: 30000000,
+  monthlyHourTarget: 160,
+  salesTargets: structuredClone(salesTargets),
+  hourTargets: { Бат: 176, Саруул: 160, bat: 160 },
+  profiles: structuredClone(defaultProfiles),
+  users: [
+    { username: "bat", password: "1234", name: "bat", role: "accountant" },
+    { username: "bat-sales", password: "1234", name: "Бат", role: "sales" },
+    { username: "saruul", password: "1234", name: "Саруул", role: "sales" },
+  ],
+  locationVerified: false,
+  activeShift: null,
+  timeEntries: [
+    {
+      id: 1,
+      name: "Бат",
+      region: "Төв оффис",
+      checkIn: "09:02",
+      checkOut: "18:10",
+      startedAt: "2026-05-14T09:02:00",
+      endedAt: "2026-05-14T18:10:00",
+      durationMinutes: 548,
+      note: "Төв оффис дээр ажилласан",
+      date: "2026-05-14",
+    },
+    {
+      id: 2,
+      name: "Саруул",
+      region: "Дархан салбар",
+      checkIn: "08:55",
+      checkOut: "17:45",
+      startedAt: "2026-05-14T08:55:00",
+      endedAt: "2026-05-14T17:45:00",
+      durationMinutes: 530,
+      note: "Харилцагчийн уулзалт",
+      date: "2026-05-14",
+    },
+  ],
+  orders: [
+    {
+      id: 101,
+      salesperson: "Бат",
+      customer: "Номин Дархан",
+      items: [{ product: "Цай 500гр", quantity: 8, price: 25000 }],
+      paid: 200000,
+      payment: "bank",
+      status: "paid",
+      createdAt: "2026-05-14 10:24",
+    },
+    {
+      id: 102,
+      salesperson: "Саруул",
+      customer: "Мини маркет 24",
+      items: [
+        { product: "Кофе 1кг", quantity: 3, price: 42000 },
+        { product: "Ус 0.5л", quantity: 10, price: 1200 },
+      ],
+      paid: 138000,
+      payment: "cash",
+      status: "paid",
+      createdAt: "2026-05-14 11:05",
+    },
+  ],
+};
+
+let liveClockTimer = null;
+const state = loadState();
+
+const loginScreen = document.querySelector("#login-screen");
+const appScreen = document.querySelector("#app-screen");
+const loginForm = document.querySelector("#login-form");
+const roleStep = document.querySelector("#role-step");
+const loginStep = document.querySelector("#login-step");
+const roleSelect = document.querySelector("#role-select");
+const username = document.querySelector("#username");
+const backToRoles = document.querySelector("#back-to-roles");
+const changeRole = document.querySelector("#change-role");
+const selectedRoleIcon = document.querySelector("#selected-role-icon");
+const selectedRoleName = document.querySelector("#selected-role-name");
+const selectedRoleDesc = document.querySelector("#selected-role-desc");
+const logoutBtn = document.querySelector("#logout-btn");
+const userMenu = document.querySelector("#user-menu");
+const closeMenu = document.querySelector("#close-menu");
+const menuContent = document.querySelector("#menu-content");
+const menuTitle = document.querySelector("#menu-title");
+const menuLogout = document.querySelector("#menu-logout");
+const userTitle = document.querySelector("#user-title");
+const currentRole = document.querySelector("#current-role");
+const tabs = document.querySelector("#tabs");
+const view = document.querySelector("#view");
+
+const roleLabels = {
+  sales: "Борлуулагч",
+  staff: "Ажилтан",
+  accountant: "Нягтлан",
+};
+
+const loginRoleMeta = {
+  accountant: { label: "Нягтлан", desc: "Системийн админ", icon: "▣" },
+  staff: { label: "Ажилтан", desc: "Компанийн ажилтан", icon: "●" },
+  sales: { label: "Борлуулагч", desc: "Борлуулалтын ажилтан", icon: "◆" },
+};
+
+const tabMap = {
+  sales: [
+    { id: "time", label: "Цаг" },
+    { id: "order", label: "Захиалга" },
+    { id: "sales", label: "Борлуулалт" },
+  ],
+  staff: [
+    { id: "time", label: "Цаг" },
+    { id: "accounting", label: "Тайлан" },
+  ],
+  accountant: [
+    { id: "accounting", label: "Тайлан" },
+    { id: "time", label: "Цаг" },
+    { id: "order", label: "Захиалга" },
+  ],
+};
+
+loginForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const user = findUser(username.value.trim(), document.querySelector("#password").value, roleSelect.value);
+  if (!user) {
+    alert("Нэвтрэх нэр, нууц үг эсвэл эрх буруу байна.");
+    return;
+  }
+  state.currentUser = {
+    name: user.name,
+    role: user.role,
+  };
+  ensureProfile(state.currentUser.name).role = roleLabels[state.currentUser.role];
+  state.activeTab = state.currentUser.role === "accountant" ? "accounting" : "time";
+  saveState();
+  renderApp();
+});
+
+document.querySelectorAll("[data-login-role]").forEach((button) => {
+  button.addEventListener("click", () => {
+    roleSelect.value = button.dataset.loginRole;
+    username.value = defaultUsernameForRole(roleSelect.value);
+    updateSelectedRole();
+    roleStep.classList.add("hidden");
+    loginStep.classList.remove("hidden");
+  });
+});
+
+backToRoles.addEventListener("click", showRoleStep);
+changeRole.addEventListener("click", showRoleStep);
+roleSelect.addEventListener("change", updateSelectedRole);
+
+logoutBtn.addEventListener("click", () => {
+  openUserMenu("profile");
+});
+
+closeMenu.addEventListener("click", closeUserMenu);
+menuLogout.addEventListener("click", () => {
+  state.currentUser = null;
+  saveState();
+  closeUserMenu();
+  loginScreen.classList.remove("hidden");
+  appScreen.classList.add("hidden");
+  showRoleStep();
+});
+
+userMenu.addEventListener("click", (event) => {
+  if (event.target === userMenu) closeUserMenu();
+  const viewButton = event.target.closest("[data-menu-view]");
+  if (viewButton) renderUserMenu(viewButton.dataset.menuView);
+});
+
+function showRoleStep() {
+  roleStep.classList.remove("hidden");
+  loginStep.classList.add("hidden");
+}
+
+function updateSelectedRole() {
+  const meta = loginRoleMeta[roleSelect.value] || loginRoleMeta.sales;
+  selectedRoleIcon.textContent = meta.icon;
+  selectedRoleName.textContent = meta.label;
+  selectedRoleDesc.textContent = meta.desc;
+}
+
+function findUser(loginName, password, role) {
+  return state.users.find((user) => user.username === loginName && user.password === password && user.role === role);
+}
+
+function defaultUsernameForRole(role) {
+  return state.users.find((user) => user.role === role)?.username || "bat";
+}
+
+function openUserMenu(view = "profile") {
+  renderUserMenu(view);
+  userMenu.classList.remove("hidden");
+}
+
+function closeUserMenu() {
+  userMenu.classList.add("hidden");
+}
+
+function renderUserMenu(view = "profile") {
+  const profile = ensureProfile();
+  document.querySelectorAll("[data-menu-view]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.menuView === view);
+    if (button.dataset.menuView === "plans") {
+      button.classList.toggle("hidden", state.currentUser.role !== "accountant");
+    }
+  });
+  if (view === "edit") return renderProfileEditor(profile);
+  if (view === "employees") return renderEmployeesMenu();
+  if (view === "plans" && state.currentUser.role === "accountant") return renderPlanSettings();
+  menuTitle.textContent = "Профайл";
+  menuContent.innerHTML = `
+    <article class="profile-card">
+      <img src="${profile.photo || "./assets/batmon-icon.png"}" alt="" />
+      <div>
+        <h4>${profile.name}</h4>
+        <span>${profile.role || roleLabels[state.currentUser.role]}</span>
+      </div>
+    </article>
+    <div class="profile-details">
+      <p><strong>И-мэйл</strong><span>${profile.email || "-"}</span></p>
+      <p><strong>Утас</strong><span>${profile.phone || "-"}</span></p>
+      <p><strong>Нас</strong><span>${profile.age || "-"}</span></p>
+      <p><strong>Эрх</strong><span>${roleLabels[state.currentUser.role]}</span></p>
+    </div>
+  `;
+}
+
+function renderProfileEditor(profile) {
+  menuTitle.textContent = "Профайл засах";
+  menuContent.innerHTML = `
+    <form id="profile-form" class="menu-form">
+      <label>Нэр<input id="profile-name" value="${profile.name || ""}" /></label>
+      <label>И-мэйл<input id="profile-email" value="${profile.email || ""}" /></label>
+      <label>Утас<input id="profile-phone" value="${profile.phone || ""}" /></label>
+      <label>Нас<input id="profile-age" type="number" min="16" value="${profile.age || ""}" /></label>
+      <label>Зураг URL<input id="profile-photo" value="${profile.photo || "./assets/batmon-icon.png"}" /></label>
+      <button class="primary-action" type="submit">Хадгалах</button>
+    </form>
+  `;
+  document.querySelector("#profile-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const oldName = state.currentUser.name;
+    const newName = document.querySelector("#profile-name").value.trim() || oldName;
+    const nextProfile = {
+      name: newName,
+      email: document.querySelector("#profile-email").value.trim(),
+      phone: document.querySelector("#profile-phone").value.trim(),
+      age: document.querySelector("#profile-age").value,
+      role: profile.role || roleLabels[state.currentUser.role],
+      photo: document.querySelector("#profile-photo").value.trim() || "./assets/batmon-icon.png",
+    };
+    if (newName !== oldName) {
+      delete state.profiles[oldName];
+      state.salesTargets[newName] = state.salesTargets[oldName] || salesTargetFor(oldName);
+      state.hourTargets[newName] = state.hourTargets[oldName] || hourTargetFor(oldName);
+      state.users.forEach((user) => {
+        if (user.name === oldName) user.name = newName;
+      });
+      state.currentUser.name = newName;
+    }
+    state.profiles[newName] = nextProfile;
+    saveState();
+    renderApp();
+    renderUserMenu("profile");
+  });
+}
+
+function renderEmployeesMenu() {
+  menuTitle.textContent = "Ажилчид";
+  menuContent.innerHTML = `
+    ${state.currentUser.role === "accountant" ? `
+      <details class="add-user-panel">
+        <summary>Шинэ ажилтан нэмэх</summary>
+        <form id="add-user-form" class="menu-form">
+          <label>Нэр<input id="new-user-name" required /></label>
+          <label>
+            Эрх
+            <select id="new-user-role">
+              <option value="sales">Борлуулагч</option>
+              <option value="staff">Ажилтан</option>
+              <option value="accountant">Нягтлан</option>
+            </select>
+          </label>
+          <label>Нэвтрэх нэр<input id="new-user-username" required /></label>
+          <label>Нууц үг<input id="new-user-password" value="1234" required /></label>
+          <label>И-мэйл<input id="new-user-email" type="email" /></label>
+          <label>Утас<input id="new-user-phone" /></label>
+          <label>Нас<input id="new-user-age" type="number" min="16" /></label>
+          <label>Зураг URL<input id="new-user-photo" value="./assets/batmon-icon.png" /></label>
+          <label>Сарын борлуулалтын төлөвлөгөө<input id="new-user-sales-target" type="number" min="0" value="8000000" /></label>
+          <label>Сарын ажиллах цаг<input id="new-user-hour-target" type="number" min="0" value="160" /></label>
+          <button class="primary-action" type="submit">Хэрэглэгч нэмэх</button>
+        </form>
+      </details>
+    ` : ""}
+    <div class="employee-list">
+      ${employeeNames()
+        .map((name) => {
+          const profile = ensureProfile(name);
+          return `
+            <article class="employee-item">
+              <img src="${profile.photo || "./assets/batmon-icon.png"}" alt="" />
+              <div>
+                <h4>${profile.name}</h4>
+                <span>${profile.phone || "Утас бүртгээгүй"}</span>
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+  const addUserForm = document.querySelector("#add-user-form");
+  if (addUserForm) addUserForm.addEventListener("submit", addNewUser);
+}
+
+function addNewUser(event) {
+  event.preventDefault();
+  const newUser = {
+    name: document.querySelector("#new-user-name").value.trim(),
+    role: document.querySelector("#new-user-role").value,
+    username: document.querySelector("#new-user-username").value.trim(),
+    password: document.querySelector("#new-user-password").value,
+  };
+  if (!newUser.name || !newUser.username || !newUser.password) return;
+  if (state.users.some((user) => user.username === newUser.username)) {
+    alert("Энэ нэвтрэх нэр бүртгэлтэй байна.");
+    return;
+  }
+  state.users.push(newUser);
+  state.profiles[newUser.name] = {
+    name: newUser.name,
+    email: document.querySelector("#new-user-email").value.trim(),
+    phone: document.querySelector("#new-user-phone").value.trim(),
+    age: document.querySelector("#new-user-age").value,
+    role: roleLabels[newUser.role],
+    photo: document.querySelector("#new-user-photo").value.trim() || "./assets/batmon-icon.png",
+  };
+  state.salesTargets[newUser.name] = Number(document.querySelector("#new-user-sales-target").value || 0);
+  state.hourTargets[newUser.name] = Number(document.querySelector("#new-user-hour-target").value || 0);
+  saveState();
+  renderApp();
+  renderUserMenu("employees");
+}
+
+function renderPlanSettings() {
+  menuTitle.textContent = "Төлөвлөгөө";
+  menuContent.innerHTML = `
+    <form id="plan-form" class="menu-form">
+      <label>
+        Ажилтан
+        <select id="plan-person">
+          ${employeeNames().map((name) => `<option value="${name}">${name}</option>`).join("")}
+        </select>
+      </label>
+      <label>Сарын борлуулалтын төлөвлөгөө<input id="plan-sales" type="number" min="0" /></label>
+      <label>Сарын ажиллах цаг<input id="plan-hours" type="number" min="0" /></label>
+      <button class="primary-action" type="submit">Төлөвлөгөө хадгалах</button>
+    </form>
+  `;
+  const personSelect = document.querySelector("#plan-person");
+  const salesInput = document.querySelector("#plan-sales");
+  const hoursInput = document.querySelector("#plan-hours");
+  const syncPlanInputs = () => {
+    salesInput.value = salesTargetFor(personSelect.value);
+    hoursInput.value = hourTargetFor(personSelect.value);
+  };
+  personSelect.addEventListener("change", syncPlanInputs);
+  syncPlanInputs();
+  document.querySelector("#plan-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    state.salesTargets[personSelect.value] = Number(salesInput.value || 0);
+    state.hourTargets[personSelect.value] = Number(hoursInput.value || 0);
+    saveState();
+    renderApp();
+    renderUserMenu("plans");
+  });
+}
+
+function loadState() {
+  const saved = localStorage.getItem("salesops-state");
+  const initialState = saved ? { ...structuredClone(demoState), ...JSON.parse(saved) } : structuredClone(demoState);
+  initialState.orders = initialState.orders.map(normalizeOrder);
+  initialState.timeEntries = initialState.timeEntries.map(normalizeTimeEntry);
+  initialState.draftItems = initialState.draftItems || [];
+  initialState.draftCustomer = initialState.draftCustomer || "";
+  initialState.monthlyTarget = Number(initialState.monthlyTarget || demoState.monthlyTarget);
+  initialState.monthlyHourTarget = Number(initialState.monthlyHourTarget || demoState.monthlyHourTarget);
+  initialState.salesTargets = { ...salesTargets, ...(initialState.salesTargets || {}) };
+  initialState.hourTargets = { ...(demoState.hourTargets || {}), ...(initialState.hourTargets || {}) };
+  initialState.profiles = { ...structuredClone(defaultProfiles), ...(initialState.profiles || {}) };
+  initialState.users = [...(demoState.users || []), ...(initialState.users || [])].filter(
+    (user, index, users) => users.findIndex((item) => item.username === user.username) === index,
+  );
+  initialState.locationVerified = Boolean(initialState.locationVerified);
+  initialState.activeShift = initialState.activeShift || null;
+  initialState.selectedSalesperson = initialState.selectedSalesperson || "all";
+  initialState.selectedTimeEmployee = initialState.selectedTimeEmployee || "all";
+  initialState.accountantTimeMode = initialState.accountantTimeMode || "mine";
+  return initialState;
+}
+
+function normalizeOrder(order) {
+  const normalized = Array.isArray(order.items)
+    ? order
+    : {
+        ...order,
+        items: [
+          {
+            product: order.product || "Бараа",
+            quantity: Number(order.quantity || 1),
+            price: Number(order.price || 0),
+          },
+        ],
+      };
+  const total = orderTotal(normalized);
+  return {
+    ...normalized,
+    paid: Number(normalized.paid || 0),
+    status: normalized.status || (Number(normalized.paid || 0) >= total ? "paid" : "unpaid"),
+  };
+}
+
+function normalizeTimeEntry(entry) {
+  if (entry.durationMinutes) return entry;
+  const durationMinutes = minutesBetweenTimes(entry.checkIn, entry.checkOut);
+  return {
+    ...entry,
+    startedAt: `${entry.date}T${entry.checkIn || "09:00"}:00`,
+    endedAt: `${entry.date}T${entry.checkOut || "18:00"}:00`,
+    durationMinutes,
+  };
+}
+
+function saveState() {
+  localStorage.setItem("salesops-state", JSON.stringify(state));
+}
+
+function money(value) {
+  return new Intl.NumberFormat("mn-MN").format(Math.round(value || 0)) + "₮";
+}
+
+function today() {
+  return dateKey(new Date());
+}
+
+function dateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function currentMonth() {
+  return today().slice(0, 7);
+}
+
+function currentYear() {
+  return today().slice(0, 4);
+}
+
+function timeText(date) {
+  return date.toTimeString().slice(0, 5);
+}
+
+function orderTotal(order) {
+  return order.items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
+}
+
+function draftTotal() {
+  return state.draftItems.reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
+}
+
+function minutesBetweenTimes(start, end) {
+  if (!start || !end) return 0;
+  const [startHour, startMinute] = start.split(":").map(Number);
+  const [endHour, endMinute] = end.split(":").map(Number);
+  return Math.max(0, endHour * 60 + endMinute - (startHour * 60 + startMinute));
+}
+
+function formatHours(minutes) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours}ц ${String(mins).padStart(2, "0")}м`;
+}
+
+function employeeNames() {
+  return [...new Set([...Object.keys(state.profiles || {}), ...state.orders.map((order) => order.salesperson), ...state.timeEntries.map((entry) => entry.name)])].filter(Boolean);
+}
+
+function ensureProfile(name = state.currentUser?.name) {
+  if (!name) return null;
+  if (!state.profiles[name]) {
+    state.profiles[name] = {
+      name,
+      email: `${name}@batmon.mn`,
+      phone: "",
+      age: "",
+      role: roleLabels[state.currentUser?.role] || "Ажилтан",
+      photo: "./assets/batmon-icon.png",
+    };
+  }
+  return state.profiles[name];
+}
+
+function salesTargetFor(name) {
+  return Number(state.salesTargets?.[name] || 8000000);
+}
+
+function hourTargetFor(name) {
+  return Number(state.hourTargets?.[name] || state.monthlyHourTarget || 160);
+}
+
+function renderPersonSelect(targetId, value, onChange) {
+  const target = document.querySelector(targetId);
+  if (!target) return;
+  target.innerHTML = `
+    <section class="tool-panel selector-panel">
+      <label>
+        Ажилтан сонгох
+        <select id="${targetId.replace("#", "")}-select">
+          <option value="all" ${value === "all" ? "selected" : ""}>Бүгд</option>
+          ${employeeNames()
+            .map((name) => `<option value="${name}" ${value === name ? "selected" : ""}>${name}</option>`)
+            .join("")}
+        </select>
+      </label>
+    </section>
+  `;
+  const select = target.querySelector("select");
+  select.addEventListener("change", () => onChange(select.value));
+}
+
+function renderAccountantTimeTabs() {
+  const target = document.querySelector("#accountant-time-tabs");
+  if (!target || state.currentUser.role !== "accountant") return;
+  target.innerHTML = `
+    <div class="sub-tab-bar">
+      <button class="sub-tab-button ${state.accountantTimeMode === "mine" ? "active" : ""}" type="button" data-time-mode="mine">Миний цаг</button>
+      <button class="sub-tab-button ${state.accountantTimeMode === "employees" ? "active" : ""}" type="button" data-time-mode="employees">Ажилчид</button>
+    </div>
+  `;
+  target.querySelectorAll("[data-time-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.accountantTimeMode = button.dataset.timeMode;
+      saveState();
+      renderTimeView();
+    });
+  });
+}
+
+function renderApp() {
+  if (!state.currentUser) return;
+  ensureProfile(state.currentUser.name);
+  loginScreen.classList.add("hidden");
+  appScreen.classList.remove("hidden");
+  userTitle.textContent = `${state.currentUser.name}, сайн байна уу`;
+  currentRole.textContent = roleLabels[state.currentUser.role];
+  renderTabs();
+  renderView();
+}
+
+function salesMetrics(person = "all") {
+  const scopedOrders = person === "all" ? state.orders : state.orders.filter((order) => order.salesperson === person);
+  const todaysOrders = scopedOrders.filter((order) => order.createdAt?.startsWith(today()));
+  const monthlyOrders = scopedOrders.filter((order) => order.createdAt?.startsWith(currentMonth()));
+  const daySales = todaysOrders.reduce((sum, order) => sum + orderTotal(order), 0);
+  const monthSales = monthlyOrders.reduce((sum, order) => sum + orderTotal(order), 0);
+  const bank = todaysOrders.filter((order) => order.payment === "bank").reduce((sum, order) => sum + order.paid, 0);
+  const cash = todaysOrders.filter((order) => order.payment === "cash").reduce((sum, order) => sum + order.paid, 0);
+  const target = person === "all" ? state.monthlyTarget : salesTargetFor(person);
+  const percent = Math.min(100, Math.round((monthSales / target) * 100));
+  return { todaysOrders, monthlyOrders, daySales, monthSales, bank, cash, percent, target };
+}
+
+function workMetrics(person = currentWorkPerson()) {
+  const ownEntries = state.timeEntries.filter((entry) => person === "all" || entry.name === person);
+  const day = ownEntries.filter((entry) => entry.date === today()).reduce((sum, entry) => sum + entry.durationMinutes, 0);
+  const month = ownEntries.filter((entry) => entry.date?.startsWith(currentMonth())).reduce((sum, entry) => sum + entry.durationMinutes, 0);
+  const year = ownEntries.filter((entry) => entry.date?.startsWith(currentYear())).reduce((sum, entry) => sum + entry.durationMinutes, 0);
+  const targetHours = person === "all" ? state.monthlyHourTarget : hourTargetFor(person);
+  const targetMinutes = targetHours * 60;
+  const percent = Math.min(100, Math.round((month / targetMinutes) * 100));
+  return { day, month, year, targetMinutes, targetHours, percent };
+}
+
+function currentWorkPerson() {
+  if (state.currentUser?.role === "accountant") {
+    return state.accountantTimeMode === "mine" ? state.currentUser.name : state.selectedTimeEmployee;
+  }
+  return state.currentUser?.name || "all";
+}
+
+function renderSalesDashboard(person = "all") {
+  const target = document.querySelector("#sales-dashboard");
+  if (!target) return;
+  const metrics = salesMetrics(person);
+  const title = person === "all" ? "Нийт борлуулалт" : `${person} - борлуулалт`;
+  target.innerHTML = `
+    <section class="dashboard-card">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Борлуулалтын явц</p>
+          <h3>${title}</h3>
+        </div>
+        <strong>${metrics.percent}%</strong>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-ring" style="--progress:${metrics.percent}">
+          <span>${metrics.percent}%</span>
+        </div>
+        <div class="progress-copy">
+          <span>Төлөвлөгөө: ${money(metrics.target)}</span>
+          <strong>${money(metrics.monthSales)}</strong>
+          <div class="progress-bar"><i style="width:${metrics.percent}%"></i></div>
+        </div>
+      </div>
+      <div class="summary-grid in-panel">
+        <article class="summary-card"><span>Өдрийн борлуулалт</span><strong>${money(metrics.daySales)}</strong></article>
+        <article class="summary-card"><span>Сарын борлуулалт</span><strong>${money(metrics.monthSales)}</strong></article>
+        <article class="summary-card"><span>Өнөөдөр дансаар</span><strong>${money(metrics.bank)}</strong></article>
+        <article class="summary-card"><span>Өнөөдөр бэлнээр</span><strong>${money(metrics.cash)}</strong></article>
+      </div>
+    </section>
+  `;
+}
+
+function renderTimeDashboard(person = currentWorkPerson()) {
+  const target = document.querySelector("#time-dashboard");
+  if (!target) return;
+  const metrics = workMetrics(person);
+  const title = person === "all" ? "Бүх ажилчдын цаг" : `${person} - цагийн явц`;
+  target.innerHTML = `
+    <section class="dashboard-card">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Цагийн явц</p>
+          <h3>${title}</h3>
+        </div>
+        <strong>${metrics.percent}%</strong>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-ring work-ring" style="--progress:${metrics.percent}">
+          <span>${metrics.percent}%</span>
+        </div>
+        <div class="progress-copy">
+          <span>Сарын норм: ${metrics.targetHours}ц</span>
+          <strong>${formatHours(metrics.month)}</strong>
+          <div class="progress-bar"><i style="width:${metrics.percent}%"></i></div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function topCustomers() {
+  const totals = new Map();
+  state.orders.forEach((order) => {
+    totals.set(order.customer, (totals.get(order.customer) || 0) + orderTotal(order));
+  });
+  return [...totals.entries()]
+    .map(([customer, total]) => ({ customer, total }))
+    .sort((a, b) => b.total - a.total);
+}
+
+function salesPeopleIndex() {
+  const names = new Set([...Object.keys(state.salesTargets || {}), ...state.orders.map((order) => order.salesperson)]);
+  return [...names]
+    .map((name) => {
+      const total = state.orders
+        .filter((order) => order.salesperson === name && order.createdAt?.startsWith(currentMonth()))
+        .reduce((sum, order) => sum + orderTotal(order), 0);
+      const target = salesTargetFor(name);
+      const percent = Math.min(100, Math.round((total / target) * 100));
+      return { name, total, target, percent };
+    })
+    .sort((a, b) => b.percent - a.percent);
+}
+
+function incomeMetrics() {
+  const monthlyOrders = state.orders.filter((order) => order.createdAt?.startsWith(currentMonth()));
+  const totalIncome = monthlyOrders.reduce((sum, order) => sum + Number(order.paid || 0), 0);
+  const expectedIncome = monthlyOrders.reduce((sum, order) => sum + orderTotal(order), 0);
+  const unpaidIncome = Math.max(0, expectedIncome - totalIncome);
+  const paidOrders = monthlyOrders.filter((order) => order.status === "paid").length;
+  return { monthlyOrders, totalIncome, expectedIncome, unpaidIncome, paidOrders };
+}
+
+function topProducts() {
+  const totals = new Map();
+  state.orders
+    .filter((order) => order.createdAt?.startsWith(currentMonth()))
+    .forEach((order) => {
+      order.items.forEach((item) => {
+        const existing = totals.get(item.product) || { product: item.product, quantity: 0, total: 0 };
+        existing.quantity += Number(item.quantity || 0);
+        existing.total += Number(item.quantity || 0) * Number(item.price || 0);
+        totals.set(item.product, existing);
+      });
+    });
+  return [...totals.values()].sort((a, b) => b.quantity - a.quantity || b.total - a.total);
+}
+
+function downloadMonthlyIncomeReport() {
+  const rows = [
+    ["Огноо", "Борлуулагч", "Харилцагч", "Бараа", "Нийт дүн", "Хүлээн авсан", "Төлөв", "Төлбөр"],
+    ...incomeMetrics().monthlyOrders.map((order) => [
+      order.createdAt,
+      order.salesperson,
+      order.customer,
+      order.items.map((item) => `${item.product} ${item.quantity}ш`).join("; "),
+      orderTotal(order),
+      order.paid,
+      order.status === "paid" ? "Төлөгдсөн" : "Төлөгдөөгүй",
+      order.payment === "bank" ? "Дансаар" : "Бэлнээр",
+    ]),
+  ];
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `batmon-orlogo-${currentMonth()}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function csvCell(value) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+function renderTabs() {
+  tabs.innerHTML = tabMap[state.currentUser.role]
+    .map((tab) => {
+      const active = tab.id === state.activeTab ? "active" : "";
+      return `<button class="tab-button ${active}" type="button" data-tab="${tab.id}">${tab.label}</button>`;
+    })
+    .join("");
+
+  tabs.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.activeTab = button.dataset.tab;
+      saveState();
+      renderApp();
+    });
+  });
+}
+
+function renderView() {
+  clearInterval(liveClockTimer);
+  if (state.activeTab === "sales" && state.currentUser.role !== "accountant") return renderSalesView();
+  if (state.activeTab === "order") return renderOrderView();
+  if (state.activeTab === "accounting") return renderAccountingView();
+  return renderTimeView();
+}
+
+function renderSalesView() {
+  view.innerHTML = document.querySelector("#sales-view").innerHTML;
+  renderSalesDashboard("all");
+  document.querySelector("#top-customers").innerHTML = topCustomers()
+    .map(
+      (item, index) => `
+        <article class="rank-item">
+          <strong>${index + 1}</strong>
+          <div>
+            <h4>${item.customer}</h4>
+            <span>${money(item.total)} худалдан авалт</span>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderTimeView() {
+  view.innerHTML = document.querySelector("#time-view").innerHTML;
+  renderAccountantTimeTabs();
+  if (state.currentUser.role === "accountant" && state.accountantTimeMode === "employees") {
+    renderPersonSelect("#time-employee-tools", state.selectedTimeEmployee, (value) => {
+      state.selectedTimeEmployee = value;
+      saveState();
+      renderTimeView();
+    });
+    document.querySelector(".time-clock").classList.add("hidden");
+  }
+  renderTimeDashboard(currentWorkPerson());
+  const regionSelect = document.querySelector("#time-region");
+  regionSelect.innerHTML = regions.map((region) => `<option>${region}</option>`).join("");
+  if (state.activeShift?.region) regionSelect.value = state.activeShift.region;
+
+  document.querySelector("#verify-location").addEventListener("click", () => {
+    state.locationVerified = true;
+    saveState();
+    renderTimeView();
+  });
+
+  document.querySelector("#start-shift").addEventListener("click", () => {
+    if (!state.locationVerified || state.activeShift) return;
+    const now = new Date();
+    state.activeShift = {
+      id: Date.now(),
+      name: state.currentUser.name,
+      region: regionSelect.value,
+      note: document.querySelector("#time-note").value || "Ажлын байранд ирсэн",
+      startedAt: now.toISOString(),
+      date: dateKey(now),
+    };
+    saveState();
+    renderTimeView();
+  });
+
+  document.querySelector("#end-shift").addEventListener("click", () => {
+    if (!state.activeShift) return;
+    const now = new Date();
+    const startedAt = new Date(state.activeShift.startedAt);
+    const durationMinutes = Math.max(0, Math.round((now - startedAt) / 60000));
+    state.timeEntries.unshift({
+      ...state.activeShift,
+      checkIn: timeText(startedAt),
+      checkOut: timeText(now),
+      endedAt: now.toISOString(),
+      durationMinutes,
+    });
+    state.activeShift = null;
+    state.locationVerified = false;
+    saveState();
+    renderTimeView();
+  });
+
+  refreshShiftStatus();
+  renderWorkStats();
+  renderTimeList();
+  liveClockTimer = setInterval(refreshShiftStatus, 1000);
+}
+
+function refreshShiftStatus() {
+  const clock = document.querySelector("#live-clock");
+  const status = document.querySelector("#shift-status");
+  const startButton = document.querySelector("#start-shift");
+  const endButton = document.querySelector("#end-shift");
+  if (!clock || !status || !startButton || !endButton) return;
+  const now = new Date();
+  clock.textContent = timeText(now);
+  startButton.disabled = !state.locationVerified || Boolean(state.activeShift);
+  endButton.disabled = !state.activeShift;
+
+  if (state.activeShift) {
+    const minutes = Math.max(0, Math.round((now - new Date(state.activeShift.startedAt)) / 60000));
+    status.innerHTML = `
+      <div class="timer-card active">
+        <span>Ажиллаж байна · ${state.activeShift.region}</span>
+        <strong>${formatHours(minutes)}</strong>
+      </div>
+    `;
+    return;
+  }
+
+  status.innerHTML = `
+    <div class="timer-card">
+      <span>${state.locationVerified ? "Байршил баталгаажсан" : "Ажлын байран дээр байршлаа шалгана"}</span>
+      <strong>${state.locationVerified ? "Ирлээ дарахад бэлэн" : "Хүлээгдэж байна"}</strong>
+    </div>
+  `;
+}
+
+function renderWorkStats() {
+  const stats = document.querySelector("#work-stats");
+  const metrics = workMetrics(currentWorkPerson());
+  stats.innerHTML = [
+    ["Өнөөдөр", formatHours(metrics.day)],
+    ["Энэ сар", formatHours(metrics.month)],
+    ["Энэ жил", formatHours(metrics.year)],
+    ["Сарын норм", `${metrics.targetHours}ц`],
+  ]
+    .map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`)
+    .join("");
+}
+
+function renderTimeList() {
+  const person = currentWorkPerson();
+  const entries = state.timeEntries.filter((entry) => person === "all" || entry.name === person);
+  document.querySelector("#time-list").innerHTML = entries
+    .map(
+      (entry) => `
+        <article class="list-item">
+          <div class="list-item-header">
+            <h4>${entry.name}</h4>
+            <span class="badge region">${entry.region}</span>
+          </div>
+          <p>${entry.date} · ${entry.checkIn} - ${entry.checkOut} · ${formatHours(entry.durationMinutes)}</p>
+          <p>${entry.note}</p>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderOrderView() {
+  view.innerHTML = document.querySelector("#order-view").innerHTML;
+  const customerInput = document.querySelector("#customer");
+  const productSelect = document.querySelector("#product");
+  const priceInput = document.querySelector("#price");
+  const paidInput = document.querySelector("#paid");
+
+  if (state.currentUser.role === "accountant") {
+    document.querySelector("#order-form").classList.add("hidden");
+    renderPersonSelect("#accountant-order-tools", state.selectedSalesperson, (value) => {
+      state.selectedSalesperson = value;
+      saveState();
+      renderOrderView();
+    });
+    renderSalesDashboard(state.selectedSalesperson);
+    const scopedOrders = state.selectedSalesperson === "all" ? state.orders : state.orders.filter((order) => order.salesperson === state.selectedSalesperson);
+    renderOrderList("#order-list", scopedOrders);
+    return;
+  }
+
+  document.querySelector("#sales-dashboard").remove();
+  customerInput.value = state.draftCustomer;
+  productSelect.innerHTML = productCatalog.map((item) => `<option value="${item.name}">${item.name}</option>`).join("");
+  priceInput.value = productCatalog[0].price;
+  paidInput.value = draftTotal() || productCatalog[0].price;
+
+  productSelect.addEventListener("change", () => {
+    const selected = productCatalog.find((item) => item.name === productSelect.value);
+    priceInput.value = selected?.price || 0;
+  });
+
+  document.querySelector("#add-item").addEventListener("click", () => {
+    const item = {
+      product: productSelect.value,
+      quantity: Number(document.querySelector("#quantity").value),
+      price: Number(priceInput.value),
+    };
+    if (!item.product || item.quantity < 1) return;
+    state.draftCustomer = customerInput.value;
+    state.draftItems.push(item);
+    saveState();
+    renderOrderView();
+  });
+
+  renderDraftItems();
+
+  document.querySelectorAll("[data-remove-item]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.draftCustomer = customerInput.value;
+      state.draftItems.splice(Number(button.dataset.removeItem), 1);
+      saveState();
+      renderOrderView();
+    });
+  });
+
+  document.querySelectorAll(".mode-option").forEach((button) => {
+    button.classList.toggle("active", button.dataset.payment === state.selectedPayment);
+    button.addEventListener("click", () => {
+      state.selectedPayment = button.dataset.payment;
+      saveState();
+      renderOrderView();
+    });
+  });
+
+  document.querySelector("#order-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!state.draftItems.length) return;
+    const total = draftTotal();
+    const paid = Number(paidInput.value);
+    state.orders.unshift({
+      id: Date.now(),
+      salesperson: state.currentUser.name,
+      customer: customerInput.value,
+      items: structuredClone(state.draftItems),
+      paid,
+      payment: state.selectedPayment,
+      status: "unpaid",
+      createdAt: `${today()} ${new Date().toTimeString().slice(0, 5)}`,
+    });
+    state.draftItems = [];
+    state.draftCustomer = "";
+    saveState();
+    renderApp();
+  });
+
+  renderOrderList("#order-list", state.orders.filter((order) => order.salesperson === state.currentUser.name));
+}
+
+function renderDraftItems() {
+  const target = document.querySelector("#draft-items");
+  const total = draftTotal();
+  target.innerHTML = state.draftItems.length
+    ? `
+      <div class="order-lines">
+        ${state.draftItems
+          .map(
+            (item, index) => `
+              <div class="order-line">
+                <div>
+                  <strong>${item.product}</strong>
+                  <span>${item.quantity}ш · ${money(item.price)} · ${money(item.quantity * item.price)}</span>
+                </div>
+                <button class="mini-action" type="button" data-remove-item="${index}" aria-label="Хасах">×</button>
+              </div>
+            `,
+          )
+          .join("")}
+      </div>
+      <div class="draft-total"><span>Захиалгын нийт дүн</span><strong>${money(total)}</strong></div>
+    `
+    : `<p class="empty-note">Бараа сонгоод “Нэмэх” дарна.</p>`;
+}
+
+function renderOrderList(target, orders) {
+  document.querySelector(target).innerHTML = orders
+    .map((order) => {
+      const total = orderTotal(order);
+      const paymentLabel = order.payment === "bank" ? "Дансаар" : "Бэлнээр";
+      const itemText = order.items.map((item) => `${item.product} · ${item.quantity}ш`).join(", ");
+      const statusLabel = order.status === "paid" ? "Төлөгдсөн" : "Төлөгдөөгүй";
+      return `
+        <article class="list-item">
+          <div class="list-item-header">
+            <h4>${order.customer}</h4>
+            <span class="badge ${order.payment}">${paymentLabel}</span>
+          </div>
+          <p>${itemText}</p>
+          <p>Нийт: ${money(total)} · Хүлээн авсан: ${money(order.paid)}</p>
+          <div class="order-status-row">
+            <span class="status-pill ${order.status}">${statusLabel}</span>
+            <select class="status-select" data-order-status="${order.id}">
+              <option value="paid" ${order.status === "paid" ? "selected" : ""}>Төлөгдсөн</option>
+              <option value="unpaid" ${order.status === "unpaid" ? "selected" : ""}>Төлөгдөөгүй</option>
+            </select>
+          </div>
+          <p>Борлуулагч: ${order.salesperson} · ${order.createdAt}</p>
+        </article>
+      `;
+    })
+    .join("");
+
+  document.querySelectorAll("[data-order-status]").forEach((select) => {
+    select.addEventListener("change", () => {
+      const order = state.orders.find((item) => String(item.id) === select.dataset.orderStatus);
+      if (!order) return;
+      order.status = select.value;
+      saveState();
+      renderView();
+    });
+  });
+}
+
+function renderAccountingView() {
+  view.innerHTML = document.querySelector("#accounting-view").innerHTML;
+  if (state.currentUser.role === "staff") {
+    const metrics = workMetrics(state.currentUser.name);
+    document.querySelector("#accounting-stats").innerHTML = [
+      ["Өнөөдөр", formatHours(metrics.day)],
+      ["Энэ сар", formatHours(metrics.month)],
+      ["Энэ жил", formatHours(metrics.year)],
+      ["Сарын норм", `${metrics.targetHours}ц`],
+    ]
+      .map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`)
+      .join("");
+    document.querySelector("#sales-index-panel").classList.add("hidden");
+    document.querySelector("#income-panel").classList.add("hidden");
+    document.querySelector("#top-products-panel").classList.add("hidden");
+    document.querySelector("#download-income-report").classList.add("hidden");
+    const entries = state.timeEntries.filter((entry) => entry.name === state.currentUser.name);
+    document.querySelector("#accounting-list").innerHTML = entries
+      .map(
+        (entry) => `
+          <article class="list-item">
+            <div class="list-item-header">
+              <h4>${entry.name}</h4>
+              <span class="badge region">${entry.region}</span>
+            </div>
+            <p>${entry.date} · ${entry.checkIn} - ${entry.checkOut} · ${formatHours(entry.durationMinutes)}</p>
+            <p>${entry.note}</p>
+          </article>
+        `,
+      )
+      .join("");
+    return;
+  }
+
+  const metrics = salesMetrics("all");
+  const income = incomeMetrics();
+  document.querySelector("#accounting-stats").innerHTML = [
+    ["Нийт орлого", money(income.totalIncome)],
+    ["Хүлээгдэж буй", money(income.expectedIncome)],
+    ["Сарын захиалга", metrics.monthlyOrders.length],
+    ["Төлөгдсөн захиалга", income.paidOrders],
+  ]
+    .map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`)
+    .join("");
+
+  document.querySelector("#download-income-report").addEventListener("click", downloadMonthlyIncomeReport);
+
+  document.querySelector("#income-panel").innerHTML = `
+    <div class="section-heading">
+      <h3>Орлогын index</h3>
+      <span>${currentMonth()}</span>
+    </div>
+    <div class="summary-grid in-panel">
+      <article class="summary-card"><span>Дансаар</span><strong>${money(metrics.bank)}</strong></article>
+      <article class="summary-card"><span>Бэлнээр</span><strong>${money(metrics.cash)}</strong></article>
+      <article class="summary-card"><span>Төлөгдөөгүй үлдэгдэл</span><strong>${money(income.unpaidIncome)}</strong></article>
+      <article class="summary-card"><span>Орлогын биелэлт</span><strong>${income.expectedIncome ? Math.round((income.totalIncome / income.expectedIncome) * 100) : 0}%</strong></article>
+    </div>
+  `;
+
+  document.querySelector("#top-products-panel").innerHTML = `
+    <div class="section-heading">
+      <h3>Их зарагдсан бараа</h3>
+      <span>Тоо ширхэгээр</span>
+    </div>
+    <div class="rank-list">
+      ${topProducts()
+        .map(
+          (item, index) => `
+            <article class="rank-item">
+              <strong>${index + 1}</strong>
+              <div>
+                <h4>${item.product}</h4>
+                <span>${item.quantity}ш · ${money(item.total)}</span>
+              </div>
+            </article>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+
+  document.querySelector("#sales-index-panel").innerHTML = `
+    <div class="section-heading">
+      <h3>Борлуулагчийн index</h3>
+      <span>${currentMonth()}</span>
+    </div>
+    <div class="index-list">
+      ${salesPeopleIndex()
+        .map(
+          (person) => `
+            <article class="index-item">
+              <div class="index-head">
+                <strong>${person.name}</strong>
+                <span>${person.percent}%</span>
+              </div>
+              <p>${money(person.total)} / ${money(person.target)}</p>
+              <div class="progress-bar"><i style="width:${person.percent}%"></i></div>
+            </article>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+  document.querySelector("#accounting-list").innerHTML = "";
+}
+
+renderApp();

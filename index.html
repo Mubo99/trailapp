@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="mn">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Batmon Sales</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section id="login-screen" class="login-screen">
+        <div id="role-step" class="role-step">
+          <div class="brand-lockup login-brand">
+            <img src="./assets/batmon-icon.png" alt="Batmon" class="brand-mark large" />
+            <div>
+              <h1>BATMON</h1>
+              <p class="brand-subtitle">Боломжийг холбож байна</p>
+            </div>
+          </div>
+
+          <h2 class="role-title">Эрхээ сонгоно уу</h2>
+          <div class="role-card-list">
+            <button class="role-card" type="button" data-login-role="accountant">
+              <span class="role-icon">▣</span>
+              <span><strong>Нягтлан</strong><small>Системийн админ</small></span>
+              <i>›</i>
+            </button>
+            <button class="role-card" type="button" data-login-role="staff">
+              <span class="role-icon">●</span>
+              <span><strong>Ажилтан</strong><small>Компанийн ажилтан</small></span>
+              <i>›</i>
+            </button>
+            <button class="role-card" type="button" data-login-role="sales">
+              <span class="role-icon">◆</span>
+              <span><strong>Борлуулагч</strong><small>Борлуулалтын ажилтан</small></span>
+              <i>›</i>
+            </button>
+          </div>
+          <p class="role-footnote">Үргэлжлүүлэхийн тулд эрхээ сонгоно уу</p>
+        </div>
+
+        <div id="login-step" class="login-step hidden">
+          <button id="back-to-roles" class="back-button" type="button" aria-label="Буцах">←</button>
+          <div class="login-hero">
+            <h2>Нэвтрэх</h2>
+            <p>Тавтай морилно уу. Та бүртгэлээрээ нэвтэрнэ үү.</p>
+          </div>
+
+          <form id="login-form" class="login-panel">
+            <div class="selected-role-card">
+              <span id="selected-role-icon" class="role-icon">◆</span>
+              <span><strong id="selected-role-name">Борлуулагч</strong><small id="selected-role-desc">Борлуулалтын ажилтан</small></span>
+              <button id="change-role" type="button">Солих</button>
+            </div>
+            <label class="visually-hidden">
+              Эрх
+              <select id="role-select">
+                <option value="sales">Борлуулагч</option>
+                <option value="staff">Ажилтан</option>
+                <option value="accountant">Нягтлан</option>
+              </select>
+            </label>
+            <label>
+              Нэвтрэх нэр
+              <input id="username" value="bat" autocomplete="username" placeholder="Нэвтрэх нэрээ оруулна уу" />
+            </label>
+            <label>
+              Нууц үг
+              <input id="password" value="1234" type="password" autocomplete="current-password" placeholder="Нууц үгээ оруулна уу" />
+            </label>
+            <button class="primary-action" type="submit">Нэвтрэх</button>
+            <p class="contact-admin">Бүртгэл байхгүй юу? Админтай холбогдоно уу</p>
+          </form>
+        </div>
+      </section>
+
+      <section id="app-screen" class="app-screen hidden">
+        <header class="top-bar">
+          <div class="brand-lockup compact">
+            <img src="./assets/batmon-icon.png" alt="Batmon" class="brand-mark" />
+            <div>
+              <p id="current-role" class="eyebrow">Борлуулагч</p>
+              <h2 id="user-title">Сайн байна уу</h2>
+            </div>
+          </div>
+          <button id="logout-btn" class="icon-button" type="button" aria-label="Цэс">☰</button>
+        </header>
+
+        <nav id="tabs" class="tab-bar" aria-label="Үндсэн цэс"></nav>
+
+        <section id="view"></section>
+      </section>
+
+      <section id="user-menu" class="user-menu hidden" aria-label="Хэрэглэгчийн цэс">
+        <div class="menu-panel">
+          <div class="menu-head">
+            <div>
+              <p class="eyebrow">Миний цэс</p>
+              <h3 id="menu-title">Профайл</h3>
+            </div>
+            <button id="close-menu" class="mini-action" type="button" aria-label="Хаах">×</button>
+          </div>
+          <div class="menu-actions">
+            <button type="button" data-menu-view="profile">Профайл</button>
+            <button type="button" data-menu-view="edit">Засах</button>
+            <button type="button" data-menu-view="employees">Ажилчид</button>
+            <button type="button" data-menu-view="plans">Төлөвлөгөө</button>
+          </div>
+          <div id="menu-content"></div>
+          <button id="menu-logout" class="danger-action" type="button">Гарах</button>
+        </div>
+      </section>
+    </main>
+
+    <template id="time-view">
+      <div id="accountant-time-tabs"></div>
+      <div id="time-employee-tools"></div>
+      <div id="time-dashboard"></div>
+      <section class="tool-panel time-clock">
+        <div class="section-heading">
+          <h3>Цаг бүртгэл</h3>
+          <span id="live-clock"></span>
+        </div>
+        <div id="shift-status"></div>
+        <label>
+          Ажлын байр / region
+          <select id="time-region"></select>
+        </label>
+        <label>
+          Тайлбар
+          <input id="time-note" placeholder="Жишээ: Төв салбар дээр ирсэн" />
+        </label>
+        <div class="action-grid">
+          <button id="verify-location" class="secondary-action" type="button">Байршил шалгах</button>
+          <button id="start-shift" class="primary-action" type="button">Ирлээ</button>
+        </div>
+        <button id="end-shift" class="danger-action" type="button">Явлаа</button>
+      </section>
+      <section class="tool-panel">
+        <div class="section-heading">
+          <h3>Ажилласан цаг</h3>
+          <span>Өдөр · Сар · Жил</span>
+        </div>
+        <div id="work-stats" class="metric-strip"></div>
+      </section>
+      <div id="time-list" class="list-stack"></div>
+    </template>
+
+    <template id="sales-view">
+      <div id="sales-dashboard"></div>
+      <section class="tool-panel">
+        <div class="section-heading">
+          <h3>Шилдэг дэлгүүрүүд</h3>
+          <span>Их дүнгээр</span>
+        </div>
+        <div id="top-customers" class="rank-list"></div>
+      </section>
+    </template>
+
+    <template id="order-view">
+      <div id="accountant-order-tools"></div>
+      <div id="sales-dashboard"></div>
+      <form id="order-form" class="tool-panel">
+        <div class="section-heading">
+          <h3>Захиалга</h3>
+          <span>Олон бараа</span>
+        </div>
+        <label>
+          Харилцагч
+          <input id="customer" placeholder="Дэлгүүр / байгууллага" required />
+        </label>
+        <div class="order-builder">
+          <label>
+            Бараа сонгох
+            <select id="product"></select>
+          </label>
+          <div class="field-grid">
+            <label>
+              Тоо ширхэг
+              <input id="quantity" type="number" min="1" value="1" />
+            </label>
+            <label>
+              Нэгж үнэ
+              <input id="price" type="number" min="0" value="25000" />
+            </label>
+          </div>
+          <button id="add-item" class="secondary-action" type="button">Бараа нэмэх</button>
+        </div>
+        <div id="draft-items" class="draft-items"></div>
+        <div class="payment-mode" role="group" aria-label="Төлбөрийн хэлбэр">
+          <button type="button" class="mode-option active" data-payment="bank">Дансаар</button>
+          <button type="button" class="mode-option" data-payment="cash">Бэлнээр</button>
+        </div>
+        <label>
+          Мөнгө хүлээн авсан дүн
+          <input id="paid" type="number" min="0" value="25000" />
+        </label>
+        <button class="primary-action" type="submit">Захиалга хадгалах</button>
+      </form>
+      <div id="order-list" class="list-stack"></div>
+    </template>
+
+    <template id="accounting-view">
+      <div class="tool-panel">
+        <div class="section-heading">
+          <h3>Тайлан</h3>
+          <span>Өдөр / сар</span>
+        </div>
+        <div id="accounting-stats" class="metric-strip"></div>
+        <button id="download-income-report" class="primary-action report-action" type="button">Сарын орлогын тайлан татах</button>
+      </div>
+      <section id="income-panel" class="tool-panel"></section>
+      <section id="top-products-panel" class="tool-panel"></section>
+      <section id="sales-index-panel" class="tool-panel"></section>
+      <div id="accounting-list" class="list-stack"></div>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
