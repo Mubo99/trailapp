@@ -129,11 +129,11 @@ const loginRoleMeta = {
 };
 
 const mainTabs = [
-  { id: "home", label: "Нүүр", icon: "⌂" },
-  { id: "accounting", label: "Тайлан", icon: "▥" },
+  { id: "home", label: "Нүүр", icon: "home" },
+  { id: "accounting", label: "Тайлан", icon: "chart" },
   { id: "new-order", label: "Шинэ захиалга", icon: "+" },
-  { id: "orders", label: "Захиалга", icon: "▣" },
-  { id: "more", label: "Бусад", icon: "▦" },
+  { id: "orders", label: "Захиалга", icon: "calendar" },
+  { id: "more", label: "Бусад", icon: "grid" },
 ];
 
 const tabMap = {
@@ -975,7 +975,7 @@ function renderTabs() {
     .map((tab) => {
       const active = tab.id === state.activeTab ? "active" : "";
       const primary = tab.id === "new-order" ? "primary-tab" : "";
-      return `<button class="tab-button ${active} ${primary}" type="button" data-tab="${tab.id}"><span class="tab-icon">${tab.icon}</span><span>${tab.label}</span></button>`;
+      return `<button class="tab-button ${active} ${primary}" type="button" data-tab="${tab.id}"><span class="tab-icon">${iconSvg(tab.icon)}</span><span>${tab.label}</span></button>`;
     })
     .join("");
 
@@ -1002,7 +1002,7 @@ function renderView() {
 function renderScreenHero(title, subtitle = "", actionHtml = "") {
   return `
     <section class="screen-hero">
-      <div class="status-row"><span>9:41</span><span>▮▮▮ Wi-Fi ▭</span></div>
+      <div class="status-row"><span>9:41</span><span class="system-icons"><i></i><i></i><i></i>${iconSvg("pulse")}</span></div>
       <div class="hero-main">
         <div>
           <h2>${title}</h2>
@@ -1025,17 +1025,28 @@ function renderHomeView() {
   const income = incomeMetrics(scoped.filter((order) => order.createdAt?.startsWith(currentMonth())));
   const pending = scoped.reduce((sum, order) => sum + Math.max(0, orderTotal(order) - Number(order.paid || 0)), 0);
   view.innerHTML = `
-    ${renderScreenHero(`Сайн байна уу, ${state.currentUser.name}`, "Өнөөдрийн борлуулалтын тойм", `<button class="hero-icon" type="button" data-open-menu>☰</button>`)}
-    <section class="mobile-panel overlap-panel">
+    <section class="screen-hero home-hero">
+      <div class="status-row"><span>9:41</span><span class="system-icons"><i></i><i></i><i></i>${iconSvg("pulse")}</span></div>
+      <div class="home-hero-row">
+        <img src="./assets/batmon-icon.png" alt="Batmon" class="hero-logo" />
+        <div class="home-greeting">
+          <p>Сайн байна уу,</p>
+          <h2>${state.currentUser.name} 👋</h2>
+        </div>
+        <button class="hero-icon notification-button" type="button" data-open-menu>${iconSvg("bell")}<b>3</b></button>
+      </div>
+      <p class="hero-kicker">Өнөөдрийн борлуулалтын тойм</p>
+    </section>
+    <section class="mobile-panel overlap-panel stat-panel">
       <div class="mobile-stat-grid">
-        <article class="mobile-stat blue"><span>▣</span><p>Нийт орлого</p><strong>${money(income.totalIncome)}</strong></article>
-        <article class="mobile-stat green"><span>⌁</span><p>Хүлээгдэж буй</p><strong>${money(pending)}</strong></article>
-        <article class="mobile-stat purple"><span>▤</span><p>Захиалгын тоо</p><strong>${todayOrders.length}</strong></article>
-        <article class="mobile-stat orange"><span>☑</span><p>Төлөгдсөн захиалга</p><strong>${todayOrders.filter((order) => order.status === "paid").length}</strong></article>
+        <article class="mobile-stat blue"><span>${iconSvg("wallet")}</span><p>Нийт орлого</p><strong>${money(income.totalIncome)}</strong><small>↑ 12% өмнөх сараас</small></article>
+        <article class="mobile-stat green"><span>${iconSvg("pulse")}</span><p>Хүлээгдэж буй</p><strong>${money(pending)}</strong><small>↑ 8% өмнөх сараас</small></article>
+        <article class="mobile-stat purple"><span>${iconSvg("file")}</span><p>Захиалгын тоо</p><strong>${todayOrders.length}</strong><small>↑ 1 өмнөх сараас</small></article>
+        <article class="mobile-stat orange"><span>${iconSvg("checkedFile")}</span><p>Төлөгдсөн захиалга</p><strong>${todayOrders.filter((order) => order.status === "paid").length}</strong><small>↑ 1 өмнөх сараас</small></article>
       </div>
     </section>
-    <section class="mobile-panel">
-      <div class="section-heading"><h3>Сүүлийн захиалга</h3><button class="link-action" type="button" data-goto-orders>Бүгдийг харах ›</button></div>
+    <section class="mobile-panel latest-panel">
+      <div class="section-heading"><h3>Сүүлийн захиалга</h3><button class="link-action" type="button" data-goto-orders>Бүгдийг харах →</button></div>
       <div class="mobile-order-list">${renderOrderCards(scoped.slice(0, 4), false)}</div>
     </section>
   `;
@@ -1051,7 +1062,7 @@ function renderOrderCards(orders, editable = true) {
     const canDelete = editable && order.status !== "paid" && (state.currentUser.role === "accountant" || (state.currentUser.role === "sales" && order.salesperson === state.currentUser.name));
     return `
       <article class="mobile-order-card">
-        <div class="order-card-icon ${order.status === "paid" ? "paid" : "unpaid"}">▤</div>
+        <div class="order-card-icon ${order.status === "paid" ? "paid" : "unpaid"}">${iconSvg(order.status === "paid" ? "checkedFile" : "file")}</div>
         <div class="order-card-main">
           <div class="order-card-top"><strong>#Z-${String(order.id).slice(-6)}</strong><span class="status-pill ${order.status}">${statusLabel}</span></div>
           <p>${order.customer}</p>
@@ -1111,23 +1122,45 @@ function bindOrderCardActions() {
   });
 }
 
+function iconSvg(name) {
+  const icons = {
+    home: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-6h5v6"/></svg>`,
+    chart: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12"/><path d="M12 20V6"/><path d="M19 20V9"/></svg>`,
+    calendar: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v3"/><path d="M17 4v3"/><rect x="4" y="6" width="16" height="14" rx="2"/><path d="M4 10h16"/><path d="M8 14h3"/><path d="M13 14h3"/></svg>`,
+    grid: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg>`,
+    wallet: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v12H4z"/><path d="M4 7l12-3v3"/><path d="M16 13h4"/></svg>`,
+    pulse: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 13h4l2-7 4 13 2-6h6"/></svg>`,
+    file: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>`,
+    checkedFile: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5"/><path d="m9 15 2 2 4-5"/></svg>`,
+    box: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 8 8-4 8 4-8 4z"/><path d="M4 8v8l8 4 8-4V8"/><path d="M12 12v8"/></svg>`,
+    users: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M2.5 21a6.5 6.5 0 0 1 13 0"/><path d="M17 11a3 3 0 1 0 0-6"/><path d="M17 14a5 5 0 0 1 4.5 5"/></svg>`,
+    building: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V5l9-2v18"/><path d="M14 9h5v12"/><path d="M8 8h2"/><path d="M8 12h2"/><path d="M8 16h2"/></svg>`,
+    tag: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13 11 22 2 13V4h9z"/><path d="M7 8h.01"/></svg>`,
+    phone: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.5v3a2 2 0 0 1-2.2 2A19 19 0 0 1 2.5 4.2 2 2 0 0 1 4.5 2h3a1.5 1.5 0 0 1 1.4 1l1 3a1.5 1.5 0 0 1-.4 1.5L8.8 9A12 12 0 0 0 15 15.2l1.5-1.7a1.5 1.5 0 0 1 1.5-.4l3 1a1.5 1.5 0 0 1 1 1.4Z"/></svg>`,
+    user: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>`,
+    bell: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>`,
+    settings: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 2l.05.05-2.1 2.1-.05-.05a1.8 1.8 0 0 0-2-.36 1.8 1.8 0 0 0-1.1 1.65V20.5h-3v-.11A1.8 1.8 0 0 0 10.4 18.7a1.8 1.8 0 0 0-2 .36l-.05.05-2.1-2.1.05-.05a1.8 1.8 0 0 0 .36-2 1.8 1.8 0 0 0-1.65-1.1H5v-3h.11a1.8 1.8 0 0 0 1.65-1.1 1.8 1.8 0 0 0-.36-2l-.05-.05 2.1-2.1.05.05a1.8 1.8 0 0 0 2 .36 1.8 1.8 0 0 0 1.1-1.65V3.5h3v.11a1.8 1.8 0 0 0 1.1 1.65 1.8 1.8 0 0 0 2-.36l.05-.05 2.1 2.1-.05.05a1.8 1.8 0 0 0-.36 2 1.8 1.8 0 0 0 1.65 1.1H21v3h-.11a1.8 1.8 0 0 0-1.49 1.14Z"/></svg>`,
+  };
+  return icons[name] || name;
+}
+
 function renderMoreView() {
   const adminQuick = state.currentUser.role === "admin" ? `
     <section class="mobile-panel">
       <h3>Түргэн хандалт</h3>
       <div class="quick-grid">
-        <button type="button" data-admin-section="employees"><span>▢</span>Ажилчид</button>
-        <button type="button" data-admin-section="products"><span>▣</span>Бараа</button>
-        <button type="button" data-admin-section="plans"><span>%</span>Төлөвлөгөө</button>
+        <button type="button" data-admin-section="employees"><span>${iconSvg("users")}</span>Ажилчид</button>
+        <button type="button" data-admin-section="products"><span>${iconSvg("box")}</span>Бараа</button>
+        <button type="button" data-admin-section="plans"><span>${iconSvg("chart")}</span>Төлөвлөгөө</button>
       </div>
     </section>
     <section class="mobile-panel admin-workspace"><div id="admin-section-content"></div></section>
   ` : `
-    <section class="mobile-panel"><h3>Миний цэс</h3><div class="quick-grid"><button type="button" data-menu-profile><span>◉</span>Профайл</button><button type="button" data-menu-employees><span>☎</span>Ажилчид</button></div></section>
+    <section class="mobile-panel"><h3>Миний цэс</h3><div class="quick-grid"><button type="button" data-menu-profile><span>${iconSvg("user")}</span>Профайл</button><button type="button" data-menu-employees><span>${iconSvg("phone")}</span>Ажилчид</button></div></section>
     <section class="mobile-panel"><h3>Ажилчид</h3><div id="more-contact-directory"></div></section>
   `;
   view.innerHTML = `
-    ${renderScreenHero("Бусад", "Компанийн тохиргоо, хэрэглэгч, бараа, ангилал зэрэг", `<button class="hero-icon" type="button" data-open-menu>⚙</button>`)}
+    ${renderScreenHero("Бусад", "Компанийн тохиргоо, хэрэглэгч, бараа, ангилал зэрэг", `<button class="hero-icon" type="button" data-open-menu>${iconSvg("settings")}</button>`)}
     ${adminQuick}
   `;
   document.querySelector("[data-open-menu]")?.addEventListener("click", () => openUserMenu("profile"));
