@@ -1081,7 +1081,7 @@ ${order.salesperson === state.currentUser.name || state.currentUser.role === "ac
     })
     .join("");
 
-  document.querySelectorAll("[data-order-status]").forEach((select) => {
+document.querySelectorAll("[data-order-status]").forEach((select) => {
     select.addEventListener("change", () => {
       const order = state.orders.find((item) => String(item.id) === select.dataset.orderStatus);
       if (!order) return;
@@ -1089,7 +1089,8 @@ ${order.salesperson === state.currentUser.name || state.currentUser.role === "ac
       saveState();
       renderView();
     });
-document.querySelectorAll(".delete-order-btn").forEach((button) => {
+  });
+  document.querySelectorAll(".delete-order-btn").forEach((button) => {
     button.addEventListener("click", () => {
       if (!confirm("Захиалгыг устгах уу?")) return;
       state.orders = state.orders.filter(
