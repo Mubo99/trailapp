@@ -1089,7 +1089,7 @@ ${order.salesperson === state.currentUser.name || state.currentUser.role === "ac
       saveState();
       renderView();
     });
-    document.querySelectorAll(".delete-order-btn").forEach((button) => {
+document.querySelectorAll(".delete-order-btn").forEach((button) => {
     button.addEventListener("click", () => {
       if (!confirm("Захиалгыг устгах уу?")) return;
       state.orders = state.orders.filter(
@@ -1097,10 +1097,9 @@ ${order.salesperson === state.currentUser.name || state.currentUser.role === "ac
       );
       saveState();
       renderView();
-   });
+    });
   });
 }
-
 function renderAccountingView() {
   view.innerHTML = document.querySelector("#accounting-view").innerHTML;
   if (state.currentUser.role === "staff") {
