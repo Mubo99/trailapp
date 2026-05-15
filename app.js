@@ -29,7 +29,9 @@ const defaultProfiles = {
 
 const demoState = {
   currentUser: null,
-  activeTab: "order",
+  activeTab: "home",
+  lastActiveAt: Date.now(),
+  locked: false,
   selectedPayment: "bank",
   selectedSalesperson: "all",
   orderSalesperson: "",
@@ -107,6 +109,12 @@ const userTitle = document.querySelector("#user-title");
 const currentRole = document.querySelector("#current-role");
 const tabs = document.querySelector("#tabs");
 const view = document.querySelector("#view");
+const lockScreen = document.querySelector("#lock-screen");
+const unlockForm = document.querySelector("#unlock-form");
+const unlockCode = document.querySelector("#unlock-code");
+const unlockUser = document.querySelector("#unlock-user");
+const LOCK_TIMEOUT_MS = 15 * 60 * 1000;
+let lockTimer;
 
 const roleLabels = {
   admin: "Admin",
@@ -120,19 +128,18 @@ const loginRoleMeta = {
   sales: { label: "Борлуулагч", desc: "Борлуулалтын ажилтан", icon: "◆" },
 };
 
+const mainTabs = [
+  { id: "home", label: "Нүүр", icon: "⌂" },
+  { id: "accounting", label: "Тайлан", icon: "▥" },
+  { id: "new-order", label: "Шинэ захиалга", icon: "+" },
+  { id: "orders", label: "Захиалга", icon: "▣" },
+  { id: "more", label: "Бусад", icon: "▦" },
+];
+
 const tabMap = {
-  admin: [
-    { id: "admin", label: "Удирдлага" },
-    { id: "accounting", label: "Тайлан" },
-  ],
-  sales: [
-    { id: "order", label: "Захиалга" },
-    { id: "sales", label: "Борлуулалт" },
-  ],
-  accountant: [
-    { id: "accounting", label: "Тайлан" },
-    { id: "order", label: "Захиалга" },
-  ],
+  admin: mainTabs,
+  sales: mainTabs,
+  accountant: mainTabs,
 };
 
 loginForm.addEventListener("submit", (event) => {
@@ -146,6 +153,8 @@ loginForm.addEventListener("submit", (event) => {
     name: user.name,
     role: user.role,
   };
+  state.locked = false;
+  state.lastActiveAt = Date.now();
   ensureProfile(state.currentUser.name).role = roleLabels[state.currentUser.role];
   state.activeTab = defaultTabForRole(state.currentUser.role);
   saveState();
@@ -172,11 +181,39 @@ logoutBtn.addEventListener("click", () => {
 closeMenu.addEventListener("click", closeUserMenu);
 menuLogout.addEventListener("click", () => {
   state.currentUser = null;
+  state.locked = false;
   saveState();
   closeUserMenu();
   loginScreen.classList.remove("hidden");
   appScreen.classList.add("hidden");
+  lockScreen?.classList.add("hidden");
   showRoleStep();
+});
+
+["click", "input", "keydown", "touchstart", "pointerdown"].forEach((eventName) => {
+  document.addEventListener(
+    eventName,
+    () => {
+      if (!state.currentUser || state.locked) return;
+      state.lastActiveAt = Date.now();
+      localStorage.setItem("salesops-state", JSON.stringify(state));
+    },
+    { passive: true },
+  );
+});
+
+unlockForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const user = state.users.find((item) => item.name === state.currentUser?.name && item.role === state.currentUser?.role);
+  if (!user || unlockCode.value !== user.password) {
+    alert("Код буруу байна.");
+    return;
+  }
+  state.locked = false;
+  state.lastActiveAt = Date.now();
+  unlockCode.value = "";
+  saveState();
+  renderApp();
 });
 
 userMenu.addEventListener("click", (event) => {
@@ -197,10 +234,8 @@ function updateSelectedRole() {
   selectedRoleDesc.textContent = meta.desc;
 }
 
-function defaultTabForRole(role) {
-  if (role === "admin") return "admin";
-  if (role === "accountant") return "accounting";
-  return "order";
+function defaultTabForRole() {
+  return "home";
 }
 
 function findUser(loginName, password, role) {
@@ -222,13 +257,38 @@ function closeUserMenu() {
 
 function renderUserMenu(view = "profile") {
   const profile = ensureProfile();
+  const visibleViews = ["profile", "employees"];
+  if (!visibleViews.includes(view)) view = "profile";
   document.querySelectorAll("[data-menu-view]").forEach((button) => {
     button.classList.toggle("active", button.dataset.menuView === view);
-    if (["employees", "products", "plans"].includes(button.dataset.menuView)) {
-      button.classList.add("hidden");
-    }
+    button.classList.toggle("hidden", !visibleViews.includes(button.dataset.menuView));
   });
+  if (view === "employees") return renderContactDirectory(menuContent, true);
   renderProfileEditor(profile);
+}
+
+function renderContactDirectory(target = menuContent, updateTitle = false) {
+  if (updateTitle) menuTitle.textContent = "Ажилчид";
+  target.innerHTML = `
+    <div class="employee-list contact-directory">
+      ${state.users
+        .map((user) => {
+          const profile = ensureProfile(user.name);
+          const phone = String(profile.phone || "").trim();
+          return `
+            <article class="employee-item contact-card">
+              <img src="${profile.photo || "./assets/batmon-icon.png"}" alt="" />
+              <div>
+                <h4>${profile.name}</h4>
+                <span>${roleLabels[user.role] || user.role}</span>
+                ${phone ? `<a class="phone-link" href="tel:${phone}">${phone}</a>` : `<span>Утас бүртгээгүй</span>`}
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
 }
 
 function renderProfileEditor(profile) {
@@ -391,7 +451,7 @@ function addNewUser(event) {
   state.salesTargets[newUser.name] = Number(document.querySelector("#new-user-sales-target").value || 0);
   saveState();
   renderApp();
-  if (state.activeTab === "admin") renderAdminView();
+  if (state.activeTab === "more") renderMoreView();
   else renderUserMenu("employees");
 }
 
@@ -518,10 +578,12 @@ function loadState() {
   initialState.productReportMonth = initialState.productReportMonth || currentMonth();
   initialState.archiveDateFilter = initialState.archiveDateFilter || "";
   initialState.archiveNameFilter = initialState.archiveNameFilter || "";
+  initialState.lastActiveAt = Number(initialState.lastActiveAt || Date.now());
+  initialState.locked = Boolean(initialState.locked && initialState.currentUser);
   const validTabs = {
-    admin: ["admin", "accounting"],
-    sales: ["order", "sales"],
-    accountant: ["accounting", "order"],
+    admin: ["home", "accounting", "new-order", "orders", "more"],
+    sales: ["home", "accounting", "new-order", "orders", "more"],
+    accountant: ["home", "accounting", "new-order", "orders", "more"],
   };
   if (initialState.currentUser?.role === "staff") initialState.currentUser = null;
   if (!validTabs[initialState.currentUser?.role]?.includes(initialState.activeTab)) {
@@ -549,6 +611,8 @@ function prepareRuntimeState(target) {
   target.productReportDate = target.productReportDate || today();
   target.productReportMonth = target.productReportMonth || currentMonth();
   target.orderSalesperson = target.orderSalesperson || salespersonNamesFromState(target)[0] || "";
+  target.lastActiveAt = Number(target.lastActiveAt || Date.now());
+  target.locked = Boolean(target.locked && target.currentUser);
 }
 
 function normalizeOrder(order) {
@@ -667,10 +731,36 @@ function renderApp() {
   ensureProfile(state.currentUser.name);
   loginScreen.classList.add("hidden");
   appScreen.classList.remove("hidden");
+  startLockTimer();
   userTitle.textContent = `${state.currentUser.name}, сайн байна уу`;
   currentRole.textContent = roleLabels[state.currentUser.role];
   renderTabs();
   renderView();
+  renderLockState();
+}
+
+function startLockTimer() {
+  if (lockTimer) return;
+  lockTimer = setInterval(checkInactivityLock, 30000);
+}
+
+function checkInactivityLock() {
+  if (!state.currentUser || state.locked) return;
+  if (Date.now() - Number(state.lastActiveAt || Date.now()) < LOCK_TIMEOUT_MS) return;
+  state.locked = true;
+  saveState();
+  renderLockState();
+}
+
+function renderLockState() {
+  if (!lockScreen) return;
+  if (!state.currentUser || !state.locked) {
+    lockScreen.classList.add("hidden");
+    return;
+  }
+  unlockUser.textContent = state.currentUser.name;
+  lockScreen.classList.remove("hidden");
+  setTimeout(() => unlockCode?.focus(), 0);
 }
 
 function salesMetrics(person = "all") {
@@ -884,7 +974,8 @@ function renderTabs() {
   tabs.innerHTML = tabMap[state.currentUser.role]
     .map((tab) => {
       const active = tab.id === state.activeTab ? "active" : "";
-      return `<button class="tab-button ${active}" type="button" data-tab="${tab.id}">${tab.label}</button>`;
+      const primary = tab.id === "new-order" ? "primary-tab" : "";
+      return `<button class="tab-button ${active} ${primary}" type="button" data-tab="${tab.id}"><span class="tab-icon">${tab.icon}</span><span>${tab.label}</span></button>`;
     })
     .join("");
 
@@ -898,13 +989,160 @@ function renderTabs() {
 }
 
 function renderView() {
-  if (state.activeTab === "admin") return renderAdminView();
-  if (state.activeTab === "sales" && state.currentUser.role !== "accountant") return renderSalesView();
-  if (state.activeTab === "order") return renderOrderView();
+  if (state.activeTab === "home") return renderHomeView();
   if (state.activeTab === "accounting") return renderAccountingView();
+  if (state.activeTab === "new-order") return renderOrderView(true);
+  if (state.activeTab === "orders") return renderOrdersView();
+  if (state.activeTab === "more") return renderMoreView();
   state.activeTab = defaultTabForRole(state.currentUser.role);
   saveState();
   return renderView();
+}
+
+function renderScreenHero(title, subtitle = "", actionHtml = "") {
+  return `
+    <section class="screen-hero">
+      <div class="status-row"><span>9:41</span><span>▮▮▮ Wi-Fi ▭</span></div>
+      <div class="hero-main">
+        <div>
+          <h2>${title}</h2>
+          ${subtitle ? `<p>${subtitle}</p>` : ""}
+        </div>
+        ${actionHtml}
+      </div>
+    </section>
+  `;
+}
+
+function ordersForCurrentRole() {
+  if (state.currentUser.role === "sales") return state.orders.filter((order) => order.salesperson === state.currentUser.name);
+  return state.orders;
+}
+
+function renderHomeView() {
+  const scoped = ordersForCurrentRole();
+  const todayOrders = scoped.filter((order) => order.createdAt?.startsWith(today()));
+  const income = incomeMetrics(scoped.filter((order) => order.createdAt?.startsWith(currentMonth())));
+  const pending = scoped.reduce((sum, order) => sum + Math.max(0, orderTotal(order) - Number(order.paid || 0)), 0);
+  view.innerHTML = `
+    ${renderScreenHero(`Сайн байна уу, ${state.currentUser.name}`, "Өнөөдрийн борлуулалтын тойм", `<button class="hero-icon" type="button" data-open-menu>☰</button>`)}
+    <section class="mobile-panel overlap-panel">
+      <div class="mobile-stat-grid">
+        <article class="mobile-stat blue"><span>▣</span><p>Нийт орлого</p><strong>${money(income.totalIncome)}</strong></article>
+        <article class="mobile-stat green"><span>⌁</span><p>Хүлээгдэж буй</p><strong>${money(pending)}</strong></article>
+        <article class="mobile-stat purple"><span>▤</span><p>Захиалгын тоо</p><strong>${todayOrders.length}</strong></article>
+        <article class="mobile-stat orange"><span>☑</span><p>Төлөгдсөн захиалга</p><strong>${todayOrders.filter((order) => order.status === "paid").length}</strong></article>
+      </div>
+    </section>
+    <section class="mobile-panel">
+      <div class="section-heading"><h3>Сүүлийн захиалга</h3><button class="link-action" type="button" data-goto-orders>Бүгдийг харах ›</button></div>
+      <div class="mobile-order-list">${renderOrderCards(scoped.slice(0, 4), false)}</div>
+    </section>
+  `;
+  document.querySelector("[data-open-menu]")?.addEventListener("click", () => openUserMenu("profile"));
+  document.querySelector("[data-goto-orders]")?.addEventListener("click", () => { state.activeTab = "orders"; saveState(); renderApp(); });
+}
+
+function renderOrderCards(orders, editable = true) {
+  return orders.length ? orders.map((order) => {
+    const total = orderTotal(order);
+    const balance = Math.max(0, total - Number(order.paid || 0));
+    const statusLabel = order.status === "paid" ? "Төлөгдсөн" : "Төлөгдөөгүй";
+    const canDelete = editable && order.status !== "paid" && (state.currentUser.role === "accountant" || (state.currentUser.role === "sales" && order.salesperson === state.currentUser.name));
+    return `
+      <article class="mobile-order-card">
+        <div class="order-card-icon ${order.status === "paid" ? "paid" : "unpaid"}">▤</div>
+        <div class="order-card-main">
+          <div class="order-card-top"><strong>#Z-${String(order.id).slice(-6)}</strong><span class="status-pill ${order.status}">${statusLabel}</span></div>
+          <p>${order.customer}</p>
+          <small>${order.salesperson} · ${order.createdAt} · ${order.items.length} бараа</small>
+        </div>
+        <div class="order-card-money"><strong>${money(total)}</strong><span>Төлсөн: ${money(order.paid)}</span><span>Үлдэгдэл: ${money(balance)}</span>${canDelete ? `<button class="delete-order-btn icon-delete" data-order-id="${order.id}" type="button">Устгах</button>` : ""}</div>
+      </article>
+    `;
+  }).join("") : `<p class="empty-note">Захиалга алга байна.</p>`;
+}
+
+function renderOrdersView() {
+  const scoped = ordersForCurrentRole();
+  const paid = scoped.reduce((sum, order) => sum + Number(order.paid || 0), 0);
+  const total = scoped.reduce((sum, order) => sum + orderTotal(order), 0);
+  view.innerHTML = `
+    ${renderScreenHero("Захиалга", "Бүх захиалга, төлөв, төлбөрийн мэдээлэл", `<button class="hero-action" type="button" data-goto-new>+ Шинэ захиалга</button>`)}
+    <section class="mobile-panel overlap-panel order-filter-panel">
+      <input id="orders-search" placeholder="Харилцагч, захиалгын дугаар хайх" />
+      <div class="mobile-filter-row">
+        <input id="orders-date" type="date" value="" />
+        <select id="orders-person"><option value="all">Бүх борлуулагч</option>${salespersonNames().map((name) => `<option value="${name}">${name}</option>`).join("")}</select>
+      </div>
+      <div class="orders-total-strip"><span>Нийт захиалга <strong>${scoped.length}</strong></span><span>Нийт дүн <strong>${money(total)}</strong></span><span>Төлсөн <strong>${money(paid)}</strong></span><span>Үлдэгдэл <strong>${money(Math.max(0, total - paid))}</strong></span></div>
+    </section>
+    <section class="status-tabs"><button class="active">Бүгд</button><button>Шинэ</button><button>Баталгаажсан</button><button>Хүргэгдсэн</button><button>Цуцлагдсан</button></section>
+    <section id="orders-card-list" class="mobile-order-list">${renderOrderCards(scoped)}</section>
+  `;
+  document.querySelector("[data-goto-new]")?.addEventListener("click", () => { state.activeTab = "new-order"; saveState(); renderApp(); });
+  document.querySelector("#orders-date")?.addEventListener("change", renderFilteredOrders);
+  document.querySelector("#orders-person")?.addEventListener("change", renderFilteredOrders);
+  document.querySelector("#orders-search")?.addEventListener("input", renderFilteredOrders);
+  bindOrderCardActions();
+}
+
+function renderFilteredOrders() {
+  const q = document.querySelector("#orders-search")?.value.trim().toLowerCase() || "";
+  const date = document.querySelector("#orders-date")?.value || "";
+  const person = document.querySelector("#orders-person")?.value || "all";
+  const orders = ordersForCurrentRole().filter((order) => (!date || order.createdAt?.startsWith(date)) && (person === "all" || order.salesperson === person) && (!q || [order.customer, order.salesperson, String(order.id)].some((value) => String(value || "").toLowerCase().includes(q))));
+  document.querySelector("#orders-card-list").innerHTML = renderOrderCards(orders);
+  bindOrderCardActions();
+}
+
+function bindOrderCardActions() {
+  document.querySelectorAll(".delete-order-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const order = state.orders.find((item) => String(item.id) === button.dataset.orderId);
+      if (!order || order.status === "paid") return;
+      const canDelete = state.currentUser.role === "accountant" || (state.currentUser.role === "sales" && order.salesperson === state.currentUser.name);
+      if (!canDelete) return;
+      if (!confirm("Энэ төлөгдөөгүй захиалгыг устгах уу?")) return;
+      state.orders = state.orders.filter((item) => String(item.id) !== button.dataset.orderId);
+      saveState();
+      renderView();
+    });
+  });
+}
+
+function renderMoreView() {
+  const adminQuick = state.currentUser.role === "admin" ? `
+    <section class="mobile-panel">
+      <h3>Түргэн хандалт</h3>
+      <div class="quick-grid">
+        <button type="button" data-admin-section="employees"><span>▢</span>Ажилчид</button>
+        <button type="button" data-admin-section="products"><span>▣</span>Бараа</button>
+        <button type="button" data-admin-section="plans"><span>%</span>Төлөвлөгөө</button>
+      </div>
+    </section>
+    <section class="mobile-panel admin-workspace"><div id="admin-section-content"></div></section>
+  ` : `
+    <section class="mobile-panel"><h3>Миний цэс</h3><div class="quick-grid"><button type="button" data-menu-profile><span>◉</span>Профайл</button><button type="button" data-menu-employees><span>☎</span>Ажилчид</button></div></section>
+    <section class="mobile-panel"><h3>Ажилчид</h3><div id="more-contact-directory"></div></section>
+  `;
+  view.innerHTML = `
+    ${renderScreenHero("Бусад", "Компанийн тохиргоо, хэрэглэгч, бараа, ангилал зэрэг", `<button class="hero-icon" type="button" data-open-menu>⚙</button>`)}
+    ${adminQuick}
+  `;
+  document.querySelector("[data-open-menu]")?.addEventListener("click", () => openUserMenu("profile"));
+  document.querySelector("[data-menu-profile]")?.addEventListener("click", () => openUserMenu("profile"));
+  document.querySelector("[data-menu-employees]")?.addEventListener("click", () => openUserMenu("employees"));
+  if (state.currentUser.role === "admin") {
+    state.adminSection = state.adminSection || "employees";
+    document.querySelectorAll("[data-admin-section]").forEach((button) => {
+      button.classList.toggle("active", button.dataset.adminSection === state.adminSection);
+      button.addEventListener("click", () => { state.adminSection = button.dataset.adminSection; saveState(); renderMoreView(); });
+    });
+    renderAdminSection();
+  } else {
+    renderContactDirectory(document.querySelector("#more-contact-directory"));
+  }
 }
 
 function renderAdminView() {
@@ -927,7 +1165,6 @@ function renderAdminView() {
         <button class="secondary-action ${state.adminSection === "employees" ? "active-admin-tab" : ""}" type="button" data-admin-section="employees">Ажилчид</button>
         <button class="secondary-action ${state.adminSection === "products" ? "active-admin-tab" : ""}" type="button" data-admin-section="products">Бараа</button>
         <button class="secondary-action ${state.adminSection === "plans" ? "active-admin-tab" : ""}" type="button" data-admin-section="plans">Төлөвлөгөө</button>
-        <button class="secondary-action" type="button" data-admin-profile>Профайл</button>
       </div>
     </section>
     <section class="tool-panel admin-workspace">
@@ -945,13 +1182,12 @@ function renderAdminView() {
       renderAdminView();
     });
   });
-  document.querySelector("[data-admin-profile]").addEventListener("click", () => openUserMenu("profile"));
   renderAdminSection();
 }
 
 function renderAdminSection() {
   const target = document.querySelector("#admin-section-content");
-  const rerender = () => renderAdminView();
+  const rerender = () => (state.activeTab === "more" ? renderMoreView() : renderAdminView());
   if (state.adminSection === "products") return renderProductsMenu(target, rerender, false);
   if (state.adminSection === "plans") return renderPlanSettings(target, rerender, false);
   return renderEmployeesMenu(target, rerender, false);
@@ -973,25 +1209,25 @@ function renderSalesView() {
   });
 }
 
-function renderOrderView() {
-  view.innerHTML = document.querySelector("#order-view").innerHTML;
+function renderOrderView(formOnly = false) {
+  view.innerHTML = renderScreenHero("Шинэ захиалга", "Захиалгын мэдээллээ оруулна уу", `<button class="hero-action" type="button" disabled>Ноорог хадгалах</button>`) + document.querySelector("#order-view").innerHTML;
   const customerInput = document.querySelector("#customer");
   const productSelect = document.querySelector("#product");
   const priceInput = document.querySelector("#price");
   const paidInput = document.querySelector("#paid");
   let scopedOrders = state.orders.filter((order) => order.salesperson === state.currentUser.name && order.status !== "paid");
 
-  if (state.currentUser.role === "accountant") {
+  if (["accountant", "admin"].includes(state.currentUser.role) && !formOnly) {
     renderPersonSelect("#accountant-order-tools", state.selectedSalesperson, (value) => {
       state.selectedSalesperson = value;
       if (value !== "all") state.orderSalesperson = value;
       saveState();
-      renderOrderView();
+      renderOrderView(formOnly);
     });
     renderSalesDashboard(state.selectedSalesperson);
     scopedOrders = state.selectedSalesperson === "all" ? state.orders : state.orders.filter((order) => order.salesperson === state.selectedSalesperson);
   } else {
-    document.querySelector("#sales-dashboard").remove();
+    document.querySelector("#sales-dashboard")?.remove();
   }
 
   renderAccountantOrderOwner();
@@ -1042,7 +1278,7 @@ function renderOrderView() {
   document.querySelector("#order-form").addEventListener("submit", (event) => {
     event.preventDefault();
     if (!state.draftItems.length) return;
-    const salesperson = state.currentUser.role === "accountant" ? state.orderSalesperson : state.currentUser.name;
+    const salesperson = ["accountant", "admin"].includes(state.currentUser.role) ? state.orderSalesperson : state.currentUser.name;
     if (!salesperson || salesperson === "all") {
       alert("Захиалга үүсгэх борлуулагчаа сонгоно уу.");
       return;
@@ -1065,13 +1301,18 @@ function renderOrderView() {
     renderApp();
   });
 
-  renderOrderList("#order-list", scopedOrders);
+  const list = document.querySelector("#order-list");
+  if (formOnly && list) {
+    list.remove();
+  } else {
+    renderOrderList("#order-list", scopedOrders);
+  }
 }
 
 function renderAccountantOrderOwner() {
   const target = document.querySelector("#accountant-order-owner");
   if (!target) return;
-  if (state.currentUser.role !== "accountant") {
+  if (!["accountant", "admin"].includes(state.currentUser.role)) {
     target.innerHTML = "";
     return;
   }
@@ -1304,7 +1545,7 @@ function renderProductReportPanel() {
 }
 
 function renderAccountingView() {
-  view.innerHTML = document.querySelector("#accounting-view").innerHTML;
+  view.innerHTML = renderScreenHero("Тайлан", "Тайлангаа шүүж, татаж авах боломжтой.", `<button class="hero-action" type="button" data-download-hero>Тайлан татах</button>`) + document.querySelector("#accounting-view").innerHTML;
   const reportOrders = incomeReportOrders();
   const income = incomeMetrics(reportOrders);
   const periodText = reportLabel(state.incomeReportPeriod, state.incomeReportDate, state.incomeReportMonth);
@@ -1319,6 +1560,7 @@ function renderAccountingView() {
 
   renderReportFilters();
   document.querySelector("#download-income-report").addEventListener("click", downloadIncomeReport);
+  document.querySelector("[data-download-hero]")?.addEventListener("click", downloadIncomeReport);
 
   document.querySelector("#income-panel").innerHTML = `
     <div class="section-heading">

@@ -109,6 +109,19 @@
           <button id="menu-logout" class="danger-action" type="button">Гарах</button>
         </div>
       </section>
+
+      <section id="lock-screen" class="lock-screen hidden" aria-label="Түгжээтэй">
+        <form id="unlock-form" class="lock-panel">
+          <img src="./assets/batmon-icon.png" alt="Batmon" class="brand-mark large" />
+          <p class="eyebrow">15 минут идэвхгүй</p>
+          <h2><span id="unlock-user">Хэрэглэгч</span></h2>
+          <label>
+            Код
+            <input id="unlock-code" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Кодоо оруулна уу" />
+          </label>
+          <button class="primary-action" type="submit">Нээх</button>
+        </form>
+      </section>
     </main>
 
     <template id="sales-view">
