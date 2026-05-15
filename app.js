@@ -4,8 +4,6 @@ const sb = createClient(
   "sb_publishable_BHQuFWv05h0CpZ_gFRz7xA_u8-kwHsD"
 );
 
-const regions = ["Төв оффис", "Улаанбаатар салбар", "Дархан салбар", "Эрдэнэт салбар", "Агуулах"];
-
 const productCatalog = [
   { name: "Цай 500гр", price: 25000 },
   { name: "Кофе 1кг", price: 42000 },
@@ -29,50 +27,20 @@ const defaultProfiles = {
 
 const demoState = {
   currentUser: null,
-  activeTab: "time",
+  activeTab: "order",
   selectedPayment: "bank",
   selectedSalesperson: "all",
-  selectedTimeEmployee: "all",
-  accountantTimeMode: "mine",
+  archiveDateFilter: "",
+  archiveNameFilter: "",
   draftCustomer: "",
   draftItems: [],
   monthlyTarget: 30000000,
-  monthlyHourTarget: 160,
   salesTargets: structuredClone(salesTargets),
-  hourTargets: { Бат: 176, Саруул: 160, bat: 160 },
   profiles: structuredClone(defaultProfiles),
   users: [
     { username: "bat", password: "1234", name: "bat", role: "accountant" },
     { username: "bat-sales", password: "1234", name: "Бат", role: "sales" },
     { username: "saruul", password: "1234", name: "Саруул", role: "sales" },
-  ],
-  locationVerified: false,
-  activeShift: null,
-  timeEntries: [
-    {
-      id: 1,
-      name: "Бат",
-      region: "Төв оффис",
-      checkIn: "09:02",
-      checkOut: "18:10",
-      startedAt: "2026-05-14T09:02:00",
-      endedAt: "2026-05-14T18:10:00",
-      durationMinutes: 548,
-      note: "Төв оффис дээр ажилласан",
-      date: "2026-05-14",
-    },
-    {
-      id: 2,
-      name: "Саруул",
-      region: "Дархан салбар",
-      checkIn: "08:55",
-      checkOut: "17:45",
-      startedAt: "2026-05-14T08:55:00",
-      endedAt: "2026-05-14T17:45:00",
-      durationMinutes: 530,
-      note: "Харилцагчийн уулзалт",
-      date: "2026-05-14",
-    },
   ],
   orders: [
     {
@@ -101,7 +69,6 @@ const demoState = {
   ],
 };
 
-let liveClockTimer = null;
 const state = loadState();
 
 const loginScreen = document.querySelector("#login-screen");
@@ -141,17 +108,14 @@ const loginRoleMeta = {
 
 const tabMap = {
   sales: [
-    { id: "time", label: "Цаг" },
     { id: "order", label: "Захиалга" },
     { id: "sales", label: "Борлуулалт" },
   ],
   staff: [
-    { id: "time", label: "Цаг" },
     { id: "accounting", label: "Тайлан" },
   ],
   accountant: [
     { id: "accounting", label: "Тайлан" },
-    { id: "time", label: "Цаг" },
     { id: "order", label: "Захиалга" },
   ],
 };
@@ -168,7 +132,7 @@ loginForm.addEventListener("submit", (event) => {
     role: user.role,
   };
   ensureProfile(state.currentUser.name).role = roleLabels[state.currentUser.role];
-  state.activeTab = state.currentUser.role === "accountant" ? "accounting" : "time";
+  state.activeTab = defaultTabForRole(state.currentUser.role);
   saveState();
   renderApp();
 });
@@ -217,6 +181,11 @@ function updateSelectedRole() {
   selectedRoleIcon.textContent = meta.icon;
   selectedRoleName.textContent = meta.label;
   selectedRoleDesc.textContent = meta.desc;
+}
+
+function defaultTabForRole(role) {
+  if (role === "accountant" || role === "staff") return "accounting";
+  return "order";
 }
 
 function findUser(loginName, password, role) {
@@ -292,7 +261,6 @@ function renderProfileEditor(profile) {
     if (newName !== oldName) {
       delete state.profiles[oldName];
       state.salesTargets[newName] = state.salesTargets[oldName] || salesTargetFor(oldName);
-      state.hourTargets[newName] = state.hourTargets[oldName] || hourTargetFor(oldName);
       state.users.forEach((user) => {
         if (user.name === oldName) user.name = newName;
       });
@@ -328,7 +296,6 @@ function renderEmployeesMenu() {
           <label>Нас<input id="new-user-age" type="number" min="16" /></label>
           <label>Зураг URL<input id="new-user-photo" value="./assets/batmon-icon.png" /></label>
           <label>Сарын борлуулалтын төлөвлөгөө<input id="new-user-sales-target" type="number" min="0" value="8000000" /></label>
-          <label>Сарын ажиллах цаг<input id="new-user-hour-target" type="number" min="0" value="160" /></label>
           <button class="primary-action" type="submit">Хэрэглэгч нэмэх</button>
         </form>
       </details>
@@ -377,7 +344,6 @@ function addNewUser(event) {
     photo: document.querySelector("#new-user-photo").value.trim() || "./assets/batmon-icon.png",
   };
   state.salesTargets[newUser.name] = Number(document.querySelector("#new-user-sales-target").value || 0);
-  state.hourTargets[newUser.name] = Number(document.querySelector("#new-user-hour-target").value || 0);
   saveState();
   renderApp();
   renderUserMenu("employees");
@@ -394,23 +360,19 @@ function renderPlanSettings() {
         </select>
       </label>
       <label>Сарын борлуулалтын төлөвлөгөө<input id="plan-sales" type="number" min="0" /></label>
-      <label>Сарын ажиллах цаг<input id="plan-hours" type="number" min="0" /></label>
       <button class="primary-action" type="submit">Төлөвлөгөө хадгалах</button>
     </form>
   `;
   const personSelect = document.querySelector("#plan-person");
   const salesInput = document.querySelector("#plan-sales");
-  const hoursInput = document.querySelector("#plan-hours");
   const syncPlanInputs = () => {
     salesInput.value = salesTargetFor(personSelect.value);
-    hoursInput.value = hourTargetFor(personSelect.value);
   };
   personSelect.addEventListener("change", syncPlanInputs);
   syncPlanInputs();
   document.querySelector("#plan-form").addEventListener("submit", (event) => {
     event.preventDefault();
     state.salesTargets[personSelect.value] = Number(salesInput.value || 0);
-    state.hourTargets[personSelect.value] = Number(hoursInput.value || 0);
     saveState();
     renderApp();
     renderUserMenu("plans");
@@ -421,22 +383,25 @@ function loadState() {
   const saved = localStorage.getItem("salesops-state");
   const initialState = saved ? { ...structuredClone(demoState), ...JSON.parse(saved) } : structuredClone(demoState);
   initialState.orders = initialState.orders.map(normalizeOrder);
-  initialState.timeEntries = initialState.timeEntries.map(normalizeTimeEntry);
   initialState.draftItems = initialState.draftItems || [];
   initialState.draftCustomer = initialState.draftCustomer || "";
   initialState.monthlyTarget = Number(initialState.monthlyTarget || demoState.monthlyTarget);
-  initialState.monthlyHourTarget = Number(initialState.monthlyHourTarget || demoState.monthlyHourTarget);
   initialState.salesTargets = { ...salesTargets, ...(initialState.salesTargets || {}) };
-  initialState.hourTargets = { ...(demoState.hourTargets || {}), ...(initialState.hourTargets || {}) };
   initialState.profiles = { ...structuredClone(defaultProfiles), ...(initialState.profiles || {}) };
   initialState.users = [...(demoState.users || []), ...(initialState.users || [])].filter(
     (user, index, users) => users.findIndex((item) => item.username === user.username) === index,
   );
-  initialState.locationVerified = Boolean(initialState.locationVerified);
-  initialState.activeShift = initialState.activeShift || null;
   initialState.selectedSalesperson = initialState.selectedSalesperson || "all";
-  initialState.selectedTimeEmployee = initialState.selectedTimeEmployee || "all";
-  initialState.accountantTimeMode = initialState.accountantTimeMode || "mine";
+  initialState.archiveDateFilter = initialState.archiveDateFilter || "";
+  initialState.archiveNameFilter = initialState.archiveNameFilter || "";
+  const validTabs = {
+    sales: ["order", "sales"],
+    staff: ["accounting"],
+    accountant: ["accounting", "order"],
+  };
+  if (!validTabs[initialState.currentUser?.role]?.includes(initialState.activeTab)) {
+    initialState.activeTab = defaultTabForRole(initialState.currentUser?.role);
+  }
   return initialState;
 }
 
@@ -458,17 +423,6 @@ function normalizeOrder(order) {
     ...normalized,
     paid: Number(normalized.paid || 0),
     status: normalized.status || (Number(normalized.paid || 0) >= total ? "paid" : "unpaid"),
-  };
-}
-
-function normalizeTimeEntry(entry) {
-  if (entry.durationMinutes) return entry;
-  const durationMinutes = minutesBetweenTimes(entry.checkIn, entry.checkOut);
-  return {
-    ...entry,
-    startedAt: `${entry.date}T${entry.checkIn || "09:00"}:00`,
-    endedAt: `${entry.date}T${entry.checkOut || "18:00"}:00`,
-    durationMinutes,
   };
 }
 
@@ -497,14 +451,6 @@ function currentMonth() {
   return today().slice(0, 7);
 }
 
-function currentYear() {
-  return today().slice(0, 4);
-}
-
-function timeText(date) {
-  return date.toTimeString().slice(0, 5);
-}
-
 function orderTotal(order) {
   return order.items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
 }
@@ -513,21 +459,8 @@ function draftTotal() {
   return state.draftItems.reduce((sum, item) => sum + Number(item.quantity) * Number(item.price), 0);
 }
 
-function minutesBetweenTimes(start, end) {
-  if (!start || !end) return 0;
-  const [startHour, startMinute] = start.split(":").map(Number);
-  const [endHour, endMinute] = end.split(":").map(Number);
-  return Math.max(0, endHour * 60 + endMinute - (startHour * 60 + startMinute));
-}
-
-function formatHours(minutes) {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours}ц ${String(mins).padStart(2, "0")}м`;
-}
-
 function employeeNames() {
-  return [...new Set([...Object.keys(state.profiles || {}), ...state.orders.map((order) => order.salesperson), ...state.timeEntries.map((entry) => entry.name)])].filter(Boolean);
+  return [...new Set([...Object.keys(state.profiles || {}), ...state.orders.map((order) => order.salesperson)])].filter(Boolean);
 }
 
 function ensureProfile(name = state.currentUser?.name) {
@@ -549,10 +482,6 @@ function salesTargetFor(name) {
   return Number(state.salesTargets?.[name] || 8000000);
 }
 
-function hourTargetFor(name) {
-  return Number(state.hourTargets?.[name] || state.monthlyHourTarget || 160);
-}
-
 function renderPersonSelect(targetId, value, onChange) {
   const target = document.querySelector(targetId);
   if (!target) return;
@@ -571,24 +500,6 @@ function renderPersonSelect(targetId, value, onChange) {
   `;
   const select = target.querySelector("select");
   select.addEventListener("change", () => onChange(select.value));
-}
-
-function renderAccountantTimeTabs() {
-  const target = document.querySelector("#accountant-time-tabs");
-  if (!target || state.currentUser.role !== "accountant") return;
-  target.innerHTML = `
-    <div class="sub-tab-bar">
-      <button class="sub-tab-button ${state.accountantTimeMode === "mine" ? "active" : ""}" type="button" data-time-mode="mine">Миний цаг</button>
-      <button class="sub-tab-button ${state.accountantTimeMode === "employees" ? "active" : ""}" type="button" data-time-mode="employees">Ажилчид</button>
-    </div>
-  `;
-  target.querySelectorAll("[data-time-mode]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.accountantTimeMode = button.dataset.timeMode;
-      saveState();
-      renderTimeView();
-    });
-  });
 }
 
 function renderApp() {
@@ -613,24 +524,6 @@ function salesMetrics(person = "all") {
   const target = person === "all" ? state.monthlyTarget : salesTargetFor(person);
   const percent = Math.min(100, Math.round((monthSales / target) * 100));
   return { todaysOrders, monthlyOrders, daySales, monthSales, bank, cash, percent, target };
-}
-
-function workMetrics(person = currentWorkPerson()) {
-  const ownEntries = state.timeEntries.filter((entry) => person === "all" || entry.name === person);
-  const day = ownEntries.filter((entry) => entry.date === today()).reduce((sum, entry) => sum + entry.durationMinutes, 0);
-  const month = ownEntries.filter((entry) => entry.date?.startsWith(currentMonth())).reduce((sum, entry) => sum + entry.durationMinutes, 0);
-  const year = ownEntries.filter((entry) => entry.date?.startsWith(currentYear())).reduce((sum, entry) => sum + entry.durationMinutes, 0);
-  const targetHours = person === "all" ? state.monthlyHourTarget : hourTargetFor(person);
-  const targetMinutes = targetHours * 60;
-  const percent = Math.min(100, Math.round((month / targetMinutes) * 100));
-  return { day, month, year, targetMinutes, targetHours, percent };
-}
-
-function currentWorkPerson() {
-  if (state.currentUser?.role === "accountant") {
-    return state.accountantTimeMode === "mine" ? state.currentUser.name : state.selectedTimeEmployee;
-  }
-  return state.currentUser?.name || "all";
 }
 
 function renderSalesDashboard(person = "all") {
@@ -658,51 +551,11 @@ function renderSalesDashboard(person = "all") {
         </div>
       </div>
       <div class="summary-grid in-panel">
-        <article class="summary-card"><span>Өдрийн борлуулалт</span><strong>${money(metrics.daySales)}</strong></article>
+        <article class="summary-card"><span>Өнөөдрийн борлуулалт</span><strong>${money(metrics.daySales)}</strong></article>
         <article class="summary-card"><span>Сарын борлуулалт</span><strong>${money(metrics.monthSales)}</strong></article>
-        <article class="summary-card"><span>Өнөөдөр дансаар</span><strong>${money(metrics.bank)}</strong></article>
-        <article class="summary-card"><span>Өнөөдөр бэлнээр</span><strong>${money(metrics.cash)}</strong></article>
       </div>
     </section>
   `;
-}
-
-function renderTimeDashboard(person = currentWorkPerson()) {
-  const target = document.querySelector("#time-dashboard");
-  if (!target) return;
-  const metrics = workMetrics(person);
-  const title = person === "all" ? "Бүх ажилчдын цаг" : `${person} - цагийн явц`;
-  target.innerHTML = `
-    <section class="dashboard-card">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Цагийн явц</p>
-          <h3>${title}</h3>
-        </div>
-        <strong>${metrics.percent}%</strong>
-      </div>
-      <div class="progress-wrap">
-        <div class="progress-ring work-ring" style="--progress:${metrics.percent}">
-          <span>${metrics.percent}%</span>
-        </div>
-        <div class="progress-copy">
-          <span>Сарын норм: ${metrics.targetHours}ц</span>
-          <strong>${formatHours(metrics.month)}</strong>
-          <div class="progress-bar"><i style="width:${metrics.percent}%"></i></div>
-        </div>
-      </div>
-    </section>
-  `;
-}
-
-function topCustomers() {
-  const totals = new Map();
-  state.orders.forEach((order) => {
-    totals.set(order.customer, (totals.get(order.customer) || 0) + orderTotal(order));
-  });
-  return [...totals.entries()]
-    .map(([customer, total]) => ({ customer, total }))
-    .sort((a, b) => b.total - a.total);
 }
 
 function salesPeopleIndex() {
@@ -717,6 +570,51 @@ function salesPeopleIndex() {
       return { name, total, target, percent };
     })
     .sort((a, b) => b.percent - a.percent);
+}
+
+function paidArchiveOrders() {
+  const dateFilter = state.archiveDateFilter || "";
+  const nameFilter = (state.archiveNameFilter || "").trim().toLowerCase();
+  const ownName = state.currentUser?.name;
+  return state.orders
+    .filter((order) => order.status === "paid")
+    .filter((order) => state.currentUser?.role !== "sales" || order.salesperson === ownName)
+    .filter((order) => !dateFilter || order.createdAt?.startsWith(dateFilter))
+    .filter((order) => {
+      if (!nameFilter) return true;
+      return [order.customer, order.salesperson].some((value) => String(value || "").toLowerCase().includes(nameFilter));
+    })
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+}
+
+function renderPaidArchive() {
+  const dateInput = document.querySelector("#archive-date-filter");
+  const nameInput = document.querySelector("#archive-name-filter");
+  const list = document.querySelector("#paid-archive-list");
+  if (!dateInput || !nameInput || !list) return;
+
+  dateInput.value = state.archiveDateFilter || "";
+  nameInput.value = state.archiveNameFilter || "";
+
+  const orders = paidArchiveOrders();
+  list.innerHTML = orders.length
+    ? orders
+        .map((order) => {
+          const itemText = order.items.map((item) => `${item.product} · ${item.quantity}ш`).join(", ");
+          return `
+            <article class="list-item">
+              <div class="list-item-header">
+                <h4>${order.customer}</h4>
+                <span class="status-pill paid">Төлөгдсөн</span>
+              </div>
+              <p>${itemText}</p>
+              <p>Нийт: ${money(orderTotal(order))} · ${order.createdAt}</p>
+              <p>Борлуулагч: ${order.salesperson}</p>
+            </article>
+          `;
+        })
+        .join("")
+    : `<p class="empty-note">Төлөгдсөн захиалга олдсонгүй.</p>`;
 }
 
 function incomeMetrics() {
@@ -791,152 +689,28 @@ function renderTabs() {
 }
 
 function renderView() {
-  clearInterval(liveClockTimer);
   if (state.activeTab === "sales" && state.currentUser.role !== "accountant") return renderSalesView();
   if (state.activeTab === "order") return renderOrderView();
   if (state.activeTab === "accounting") return renderAccountingView();
-  return renderTimeView();
+  state.activeTab = defaultTabForRole(state.currentUser.role);
+  saveState();
+  return renderView();
 }
 
 function renderSalesView() {
   view.innerHTML = document.querySelector("#sales-view").innerHTML;
-  renderSalesDashboard("all");
-  document.querySelector("#top-customers").innerHTML = topCustomers()
-    .map(
-      (item, index) => `
-        <article class="rank-item">
-          <strong>${index + 1}</strong>
-          <div>
-            <h4>${item.customer}</h4>
-            <span>${money(item.total)} худалдан авалт</span>
-          </div>
-        </article>
-      `,
-    )
-    .join("");
-}
-
-function renderTimeView() {
-  view.innerHTML = document.querySelector("#time-view").innerHTML;
-  renderAccountantTimeTabs();
-  if (state.currentUser.role === "accountant" && state.accountantTimeMode === "employees") {
-    renderPersonSelect("#time-employee-tools", state.selectedTimeEmployee, (value) => {
-      state.selectedTimeEmployee = value;
-      saveState();
-      renderTimeView();
-    });
-    document.querySelector(".time-clock").classList.add("hidden");
-  }
-  renderTimeDashboard(currentWorkPerson());
-  const regionSelect = document.querySelector("#time-region");
-  regionSelect.innerHTML = regions.map((region) => `<option>${region}</option>`).join("");
-  if (state.activeShift?.region) regionSelect.value = state.activeShift.region;
-
-  document.querySelector("#verify-location").addEventListener("click", () => {
-    state.locationVerified = true;
+  renderSalesDashboard(state.currentUser.name);
+  renderPaidArchive();
+  document.querySelector("#archive-date-filter").addEventListener("change", (event) => {
+    state.archiveDateFilter = event.target.value;
     saveState();
-    renderTimeView();
+    renderPaidArchive();
   });
-
-  document.querySelector("#start-shift").addEventListener("click", () => {
-    if (!state.locationVerified || state.activeShift) return;
-    const now = new Date();
-    state.activeShift = {
-      id: Date.now(),
-      name: state.currentUser.name,
-      region: regionSelect.value,
-      note: document.querySelector("#time-note").value || "Ажлын байранд ирсэн",
-      startedAt: now.toISOString(),
-      date: dateKey(now),
-    };
+  document.querySelector("#archive-name-filter").addEventListener("input", (event) => {
+    state.archiveNameFilter = event.target.value;
     saveState();
-    renderTimeView();
+    renderPaidArchive();
   });
-
-  document.querySelector("#end-shift").addEventListener("click", () => {
-    if (!state.activeShift) return;
-    const now = new Date();
-    const startedAt = new Date(state.activeShift.startedAt);
-    const durationMinutes = Math.max(0, Math.round((now - startedAt) / 60000));
-    state.timeEntries.unshift({
-      ...state.activeShift,
-      checkIn: timeText(startedAt),
-      checkOut: timeText(now),
-      endedAt: now.toISOString(),
-      durationMinutes,
-    });
-    state.activeShift = null;
-    state.locationVerified = false;
-    saveState();
-    renderTimeView();
-  });
-
-  refreshShiftStatus();
-  renderWorkStats();
-  renderTimeList();
-  liveClockTimer = setInterval(refreshShiftStatus, 1000);
-}
-
-function refreshShiftStatus() {
-  const clock = document.querySelector("#live-clock");
-  const status = document.querySelector("#shift-status");
-  const startButton = document.querySelector("#start-shift");
-  const endButton = document.querySelector("#end-shift");
-  if (!clock || !status || !startButton || !endButton) return;
-  const now = new Date();
-  clock.textContent = timeText(now);
-  startButton.disabled = !state.locationVerified || Boolean(state.activeShift);
-  endButton.disabled = !state.activeShift;
-
-  if (state.activeShift) {
-    const minutes = Math.max(0, Math.round((now - new Date(state.activeShift.startedAt)) / 60000));
-    status.innerHTML = `
-      <div class="timer-card active">
-        <span>Ажиллаж байна · ${state.activeShift.region}</span>
-        <strong>${formatHours(minutes)}</strong>
-      </div>
-    `;
-    return;
-  }
-
-  status.innerHTML = `
-    <div class="timer-card">
-      <span>${state.locationVerified ? "Байршил баталгаажсан" : "Ажлын байран дээр байршлаа шалгана"}</span>
-      <strong>${state.locationVerified ? "Ирлээ дарахад бэлэн" : "Хүлээгдэж байна"}</strong>
-    </div>
-  `;
-}
-
-function renderWorkStats() {
-  const stats = document.querySelector("#work-stats");
-  const metrics = workMetrics(currentWorkPerson());
-  stats.innerHTML = [
-    ["Өнөөдөр", formatHours(metrics.day)],
-    ["Энэ сар", formatHours(metrics.month)],
-    ["Энэ жил", formatHours(metrics.year)],
-    ["Сарын норм", `${metrics.targetHours}ц`],
-  ]
-    .map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`)
-    .join("");
-}
-
-function renderTimeList() {
-  const person = currentWorkPerson();
-  const entries = state.timeEntries.filter((entry) => person === "all" || entry.name === person);
-  document.querySelector("#time-list").innerHTML = entries
-    .map(
-      (entry) => `
-        <article class="list-item">
-          <div class="list-item-header">
-            <h4>${entry.name}</h4>
-            <span class="badge region">${entry.region}</span>
-          </div>
-          <p>${entry.date} · ${entry.checkIn} - ${entry.checkOut} · ${formatHours(entry.durationMinutes)}</p>
-          <p>${entry.note}</p>
-        </article>
-      `,
-    )
-    .join("");
 }
 
 function renderOrderView() {
@@ -1024,7 +798,10 @@ function renderOrderView() {
     renderApp();
   });
 
-  renderOrderList("#order-list", state.orders.filter((order) => order.salesperson === state.currentUser.name));
+  renderOrderList(
+    "#order-list",
+    state.orders.filter((order) => order.salesperson === state.currentUser.name && order.status !== "paid"),
+  );
 }
 
 function renderDraftItems() {
@@ -1107,12 +884,12 @@ document.querySelectorAll("[data-order-status]").forEach((select) => {
 function renderAccountingView() {
   view.innerHTML = document.querySelector("#accounting-view").innerHTML;
   if (state.currentUser.role === "staff") {
-    const metrics = workMetrics(state.currentUser.name);
+    const profile = ensureProfile(state.currentUser.name);
     document.querySelector("#accounting-stats").innerHTML = [
-      ["Өнөөдөр", formatHours(metrics.day)],
-      ["Энэ сар", formatHours(metrics.month)],
-      ["Энэ жил", formatHours(metrics.year)],
-      ["Сарын норм", `${metrics.targetHours}ц`],
+      ["Нэр", profile.name || state.currentUser.name],
+      ["И-мэйл", profile.email || "-"],
+      ["Утас", profile.phone || "-"],
+      ["Нас", profile.age || "-"],
     ]
       .map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`)
       .join("");
@@ -1120,21 +897,7 @@ function renderAccountingView() {
     document.querySelector("#income-panel").classList.add("hidden");
     document.querySelector("#top-products-panel").classList.add("hidden");
     document.querySelector("#download-income-report").classList.add("hidden");
-    const entries = state.timeEntries.filter((entry) => entry.name === state.currentUser.name);
-    document.querySelector("#accounting-list").innerHTML = entries
-      .map(
-        (entry) => `
-          <article class="list-item">
-            <div class="list-item-header">
-              <h4>${entry.name}</h4>
-              <span class="badge region">${entry.region}</span>
-            </div>
-            <p>${entry.date} · ${entry.checkIn} - ${entry.checkOut} · ${formatHours(entry.durationMinutes)}</p>
-            <p>${entry.note}</p>
-          </article>
-        `,
-      )
-      .join("");
+    document.querySelector("#accounting-list").innerHTML = "";
     return;
   }
 

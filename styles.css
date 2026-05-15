@@ -686,12 +686,6 @@ select:focus {
   font-weight: 900;
 }
 
-.work-ring {
-  background:
-    radial-gradient(circle closest-side, #fff 68%, transparent 70%),
-    conic-gradient(var(--green) calc(var(--progress) * 1%), #dbe7f8 0);
-}
-
 .progress-copy {
   min-width: 0;
   flex: 1;
@@ -700,8 +694,7 @@ select:focus {
 .progress-copy span,
 .summary-card span,
 .list-item span,
-.section-heading span,
-.timer-card span {
+.section-heading span {
   color: var(--muted);
   font-size: 12px;
   font-weight: 750;
@@ -751,30 +744,15 @@ select:focus {
   font-size: 18px;
 }
 
-.timer-card {
-  margin: 12px 0 16px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #f5f9ff;
-}
-
-.timer-card.active {
-  border-color: rgba(8, 93, 255, 0.35);
-  background: linear-gradient(135deg, rgba(8, 93, 255, 0.14), rgba(24, 210, 255, 0.08));
-}
-
-.timer-card strong {
-  display: block;
-  margin-top: 6px;
-  font-size: 30px;
-}
-
 .field-grid,
 .action-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+.archive-filters {
+  margin: 12px 0 14px;
 }
 
 .payment-mode {

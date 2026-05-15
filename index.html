@@ -112,48 +112,24 @@
       </section>
     </main>
 
-    <template id="time-view">
-      <div id="accountant-time-tabs"></div>
-      <div id="time-employee-tools"></div>
-      <div id="time-dashboard"></div>
-      <section class="tool-panel time-clock">
-        <div class="section-heading">
-          <h3>Цаг бүртгэл</h3>
-          <span id="live-clock"></span>
-        </div>
-        <div id="shift-status"></div>
-        <label>
-          Ажлын байр / region
-          <select id="time-region"></select>
-        </label>
-        <label>
-          Тайлбар
-          <input id="time-note" placeholder="Жишээ: Төв салбар дээр ирсэн" />
-        </label>
-        <div class="action-grid">
-          <button id="verify-location" class="secondary-action" type="button">Байршил шалгах</button>
-          <button id="start-shift" class="primary-action" type="button">Ирлээ</button>
-        </div>
-        <button id="end-shift" class="danger-action" type="button">Явлаа</button>
-      </section>
-      <section class="tool-panel">
-        <div class="section-heading">
-          <h3>Ажилласан цаг</h3>
-          <span>Өдөр · Сар · Жил</span>
-        </div>
-        <div id="work-stats" class="metric-strip"></div>
-      </section>
-      <div id="time-list" class="list-stack"></div>
-    </template>
-
     <template id="sales-view">
       <div id="sales-dashboard"></div>
       <section class="tool-panel">
         <div class="section-heading">
-          <h3>Шилдэг дэлгүүрүүд</h3>
-          <span>Их дүнгээр</span>
+          <h3>Төлөгдсөн захиалгын архив</h3>
+          <span>Өдөр / нэр</span>
         </div>
-        <div id="top-customers" class="rank-list"></div>
+        <div class="field-grid archive-filters">
+          <label>
+            Өдөр
+            <input id="archive-date-filter" type="date" />
+          </label>
+          <label>
+            Нэрээр хайх
+            <input id="archive-name-filter" placeholder="Дэлгүүр эсвэл борлуулагч" />
+          </label>
+        </div>
+        <div id="paid-archive-list" class="list-stack"></div>
       </section>
     </template>
 
