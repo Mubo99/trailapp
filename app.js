@@ -1098,7 +1098,6 @@ document.querySelectorAll(".delete-order-btn").forEach((button) => {
       saveState();
       renderView();
     });
-  });
 }
 function renderAccountingView() {
   view.innerHTML = document.querySelector("#accounting-view").innerHTML;
