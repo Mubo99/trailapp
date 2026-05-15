@@ -25,11 +25,6 @@
               <span><strong>Нягтлан</strong><small>Системийн админ</small></span>
               <i>›</i>
             </button>
-            <button class="role-card" type="button" data-login-role="staff">
-              <span class="role-icon">●</span>
-              <span><strong>Ажилтан</strong><small>Компанийн ажилтан</small></span>
-              <i>›</i>
-            </button>
             <button class="role-card" type="button" data-login-role="sales">
               <span class="role-icon">◆</span>
               <span><strong>Борлуулагч</strong><small>Борлуулалтын ажилтан</small></span>
@@ -55,7 +50,6 @@
               Эрх
               <select id="role-select">
                 <option value="sales">Борлуулагч</option>
-                <option value="staff">Ажилтан</option>
                 <option value="accountant">Нягтлан</option>
               </select>
             </label>
@@ -182,7 +176,8 @@
           <span>Өдөр / сар</span>
         </div>
         <div id="accounting-stats" class="metric-strip"></div>
-        <button id="download-income-report" class="primary-action report-action" type="button">Сарын орлогын тайлан татах</button>
+        <div id="income-report-tools"></div>
+        <button id="download-income-report" class="primary-action report-action" type="button">Орлогын тайлан татах</button>
       </div>
       <section id="income-panel" class="tool-panel"></section>
       <section id="top-products-panel" class="tool-panel"></section>

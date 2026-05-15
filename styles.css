@@ -433,6 +433,13 @@ select:focus {
   margin-top: 14px;
 }
 
+.report-filter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
 .danger-action {
   margin-top: 10px;
   background: #fff0f3;
@@ -1012,6 +1019,7 @@ select:focus {
   .summary-grid,
   .field-grid,
   .action-grid,
+  .report-filter-grid,
   .metric-strip {
     grid-template-columns: 1fr;
   }

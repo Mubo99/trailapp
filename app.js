@@ -30,6 +30,13 @@ const demoState = {
   activeTab: "order",
   selectedPayment: "bank",
   selectedSalesperson: "all",
+  incomeReportPeriod: "month",
+  incomeReportDate: "",
+  incomeReportMonth: "",
+  incomeReportSalesperson: "all",
+  productReportPeriod: "month",
+  productReportDate: "",
+  productReportMonth: "",
   archiveDateFilter: "",
   archiveNameFilter: "",
   draftCustomer: "",
@@ -95,13 +102,11 @@ const view = document.querySelector("#view");
 
 const roleLabels = {
   sales: "Борлуулагч",
-  staff: "Ажилтан",
   accountant: "Нягтлан",
 };
 
 const loginRoleMeta = {
   accountant: { label: "Нягтлан", desc: "Системийн админ", icon: "▣" },
-  staff: { label: "Ажилтан", desc: "Компанийн ажилтан", icon: "●" },
   sales: { label: "Борлуулагч", desc: "Борлуулалтын ажилтан", icon: "◆" },
 };
 
@@ -109,9 +114,6 @@ const tabMap = {
   sales: [
     { id: "order", label: "Захиалга" },
     { id: "sales", label: "Борлуулалт" },
-  ],
-  staff: [
-    { id: "accounting", label: "Тайлан" },
   ],
   accountant: [
     { id: "accounting", label: "Тайлан" },
@@ -182,7 +184,7 @@ function updateSelectedRole() {
 }
 
 function defaultTabForRole(role) {
-  if (role === "accountant" || role === "staff") return "accounting";
+  if (role === "accountant") return "accounting";
   return "order";
 }
 
@@ -191,7 +193,7 @@ function findUser(loginName, password, role) {
 }
 
 function defaultUsernameForRole(role) {
-  return state.users.find((user) => user.role === role)?.username || "bat";
+  return state.users.find((user) => user.role === role)?.username || "bat-sales";
 }
 
 function openUserMenu(view = "profile") {
@@ -283,7 +285,6 @@ function renderEmployeesMenu() {
             Эрх
             <select id="new-user-role">
               <option value="sales">Борлуулагч</option>
-              <option value="staff">Ажилтан</option>
               <option value="accountant">Нягтлан</option>
             </select>
           </label>
@@ -352,7 +353,7 @@ function renderPlanSettings() {
   menuContent.innerHTML = `
     <form id="plan-form" class="menu-form">
       <label>
-        Ажилтан
+        Хэрэглэгч
         <select id="plan-person">
           ${employeeNames().map((name) => `<option value="${name}">${name}</option>`).join("")}
         </select>
@@ -388,15 +389,25 @@ function loadState() {
   initialState.profiles = { ...structuredClone(defaultProfiles), ...(initialState.profiles || {}) };
   initialState.users = [...(demoState.users || []), ...(initialState.users || [])].filter(
     (user, index, users) => users.findIndex((item) => item.username === user.username) === index,
-  );
+  ).filter((user) => user.role !== "staff");
   initialState.selectedSalesperson = initialState.selectedSalesperson || "all";
+  if (initialState.selectedSalesperson !== "all" && !initialState.users.some((user) => user.role === "sales" && user.name === initialState.selectedSalesperson)) {
+    initialState.selectedSalesperson = "all";
+  }
+  initialState.incomeReportPeriod = initialState.incomeReportPeriod || "month";
+  initialState.incomeReportDate = initialState.incomeReportDate || today();
+  initialState.incomeReportMonth = initialState.incomeReportMonth || currentMonth();
+  initialState.incomeReportSalesperson = initialState.incomeReportSalesperson || "all";
+  initialState.productReportPeriod = initialState.productReportPeriod || "month";
+  initialState.productReportDate = initialState.productReportDate || today();
+  initialState.productReportMonth = initialState.productReportMonth || currentMonth();
   initialState.archiveDateFilter = initialState.archiveDateFilter || "";
   initialState.archiveNameFilter = initialState.archiveNameFilter || "";
   const validTabs = {
     sales: ["order", "sales"],
-    staff: ["accounting"],
     accountant: ["accounting", "order"],
   };
+  if (initialState.currentUser?.role === "staff") initialState.currentUser = null;
   if (!validTabs[initialState.currentUser?.role]?.includes(initialState.activeTab)) {
     initialState.activeTab = defaultTabForRole(initialState.currentUser?.role);
   }
@@ -461,6 +472,15 @@ function employeeNames() {
   return [...new Set([...Object.keys(state.profiles || {}), ...state.orders.map((order) => order.salesperson)])].filter(Boolean);
 }
 
+function salespersonNames() {
+  return [
+    ...new Set([
+      ...state.users.filter((user) => user.role === "sales").map((user) => user.name),
+      ...state.orders.map((order) => order.salesperson),
+    ]),
+  ].filter(Boolean);
+}
+
 function ensureProfile(name = state.currentUser?.name) {
   if (!name) return null;
   if (!state.profiles[name]) {
@@ -469,7 +489,7 @@ function ensureProfile(name = state.currentUser?.name) {
       email: `${name}@batmon.mn`,
       phone: "",
       age: "",
-      role: roleLabels[state.currentUser?.role] || "Ажилтан",
+      role: roleLabels[state.currentUser?.role] || "Борлуулагч",
       photo: "./assets/batmon-icon.png",
     };
   }
@@ -483,13 +503,14 @@ function salesTargetFor(name) {
 function renderPersonSelect(targetId, value, onChange) {
   const target = document.querySelector(targetId);
   if (!target) return;
+  const names = salespersonNames();
   target.innerHTML = `
     <section class="tool-panel selector-panel">
       <label>
-        Ажилтан сонгох
+        Борлуулагч сонгох
         <select id="${targetId.replace("#", "")}-select">
           <option value="all" ${value === "all" ? "selected" : ""}>Бүгд</option>
-          ${employeeNames()
+          ${names
             .map((name) => `<option value="${name}" ${value === name ? "selected" : ""}>${name}</option>`)
             .join("")}
         </select>
@@ -615,34 +636,65 @@ function renderPaidArchive() {
     : `<p class="empty-note">Төлөгдсөн захиалга олдсонгүй.</p>`;
 }
 
-function incomeMetrics() {
-  const monthlyOrders = state.orders.filter((order) => order.createdAt?.startsWith(currentMonth()));
-  const totalIncome = monthlyOrders.reduce((sum, order) => sum + Number(order.paid || 0), 0);
-  const expectedIncome = monthlyOrders.reduce((sum, order) => sum + orderTotal(order), 0);
-  const unpaidIncome = Math.max(0, expectedIncome - totalIncome);
-  const paidOrders = monthlyOrders.filter((order) => order.status === "paid").length;
-  return { monthlyOrders, totalIncome, expectedIncome, unpaidIncome, paidOrders };
+function reportDatePrefix(period, dateValue, monthValue) {
+  return period === "day" ? dateValue || today() : monthValue || currentMonth();
 }
 
-function topProducts() {
+function scopedReportOrders({ period = "month", date = today(), month = currentMonth(), salesperson = "all" } = {}) {
+  const prefix = reportDatePrefix(period, date, month);
+  return state.orders
+    .filter((order) => order.createdAt?.startsWith(prefix))
+    .filter((order) => salesperson === "all" || order.salesperson === salesperson);
+}
+
+function incomeMetrics(orders = scopedReportOrders()) {
+  const totalIncome = orders.reduce((sum, order) => sum + Number(order.paid || 0), 0);
+  const expectedIncome = orders.reduce((sum, order) => sum + orderTotal(order), 0);
+  const unpaidIncome = Math.max(0, expectedIncome - totalIncome);
+  const paidOrders = orders.filter((order) => order.status === "paid").length;
+  return { orders, totalIncome, expectedIncome, unpaidIncome, paidOrders };
+}
+
+function topProducts(orders = scopedReportOrders()) {
   const totals = new Map();
-  state.orders
-    .filter((order) => order.createdAt?.startsWith(currentMonth()))
-    .forEach((order) => {
-      order.items.forEach((item) => {
-        const existing = totals.get(item.product) || { product: item.product, quantity: 0, total: 0 };
-        existing.quantity += Number(item.quantity || 0);
-        existing.total += Number(item.quantity || 0) * Number(item.price || 0);
-        totals.set(item.product, existing);
-      });
+  orders.forEach((order) => {
+    order.items.forEach((item) => {
+      const existing = totals.get(item.product) || { product: item.product, quantity: 0, total: 0 };
+      existing.quantity += Number(item.quantity || 0);
+      existing.total += Number(item.quantity || 0) * Number(item.price || 0);
+      totals.set(item.product, existing);
     });
+  });
   return [...totals.values()].sort((a, b) => b.quantity - a.quantity || b.total - a.total);
 }
 
-function downloadMonthlyIncomeReport() {
+function incomeReportOrders() {
+  return scopedReportOrders({
+    period: state.incomeReportPeriod,
+    date: state.incomeReportDate,
+    month: state.incomeReportMonth,
+    salesperson: state.incomeReportSalesperson,
+  });
+}
+
+function productReportOrders() {
+  return scopedReportOrders({
+    period: state.productReportPeriod,
+    date: state.productReportDate,
+    month: state.productReportMonth,
+  });
+}
+
+function reportLabel(period, dateValue, monthValue) {
+  return reportDatePrefix(period, dateValue, monthValue);
+}
+
+function downloadIncomeReport() {
+  const orders = incomeReportOrders();
+  const metrics = incomeMetrics(orders);
   const rows = [
     ["Огноо", "Борлуулагч", "Харилцагч", "Бараа", "Нийт дүн", "Хүлээн авсан", "Төлөв", "Төлбөр"],
-    ...incomeMetrics().monthlyOrders.map((order) => [
+    ...orders.map((order) => [
       order.createdAt,
       order.salesperson,
       order.customer,
@@ -652,13 +704,31 @@ function downloadMonthlyIncomeReport() {
       order.status === "paid" ? "Төлөгдсөн" : "Төлөгдөөгүй",
       order.payment === "bank" ? "Дансаар" : "Бэлнээр",
     ]),
+    ["Нийт", "", "", "", metrics.expectedIncome, metrics.totalIncome, "", ""],
   ];
+  downloadCsv(rows, `batmon-orlogo-${reportLabel(state.incomeReportPeriod, state.incomeReportDate, state.incomeReportMonth)}.csv`);
+}
+
+function downloadProductReport() {
+  const rows = [
+    ["Бараа", "Тоо ширхэг", "Нийт дүн"],
+    ...topProducts(productReportOrders()).map((item) => [item.product, item.quantity, item.total]),
+  ];
+  const totals = rows.slice(1).reduce(
+    (sum, row) => ({ quantity: sum.quantity + Number(row[1] || 0), total: sum.total + Number(row[2] || 0) }),
+    { quantity: 0, total: 0 },
+  );
+  rows.push(["Нийт", totals.quantity, totals.total]);
+  downloadCsv(rows, `batmon-baraa-${reportLabel(state.productReportPeriod, state.productReportDate, state.productReportMonth)}.csv`);
+}
+
+function downloadCsv(rows, filename) {
   const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
   const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `batmon-orlogo-${currentMonth()}.csv`;
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -834,6 +904,9 @@ function renderOrderList(target, orders) {
       const paymentLabel = order.payment === "bank" ? "Дансаар" : "Бэлнээр";
       const itemText = order.items.map((item) => `${item.product} · ${item.quantity}ш`).join(", ");
       const statusLabel = order.status === "paid" ? "Төлөгдсөн" : "Төлөгдөөгүй";
+      const canDelete =
+        order.status !== "paid" &&
+        (state.currentUser.role === "accountant" || (state.currentUser.role === "sales" && order.salesperson === state.currentUser.name));
       return `
         <article class="list-item">
           <div class="list-item-header">
@@ -844,14 +917,18 @@ function renderOrderList(target, orders) {
           <p>Нийт: ${money(total)} · Хүлээн авсан: ${money(order.paid)}</p>
           <div class="order-status-row">
             <span class="status-pill ${order.status}">${statusLabel}</span>
-            <select class="status-select" data-order-status="${order.id}">
-              <option value="paid" ${order.status === "paid" ? "selected" : ""}>Төлөгдсөн</option>
-              <option value="unpaid" ${order.status === "unpaid" ? "selected" : ""}>Төлөгдөөгүй</option>
-            </select>
+            ${
+              order.status === "paid"
+                ? ""
+                : `<select class="status-select" data-order-status="${order.id}">
+                    <option value="paid">Төлөгдсөн</option>
+                    <option value="unpaid" selected>Төлөгдөөгүй</option>
+                  </select>`
+            }
           </div>
           <p>Борлуулагч: ${order.salesperson} · ${order.createdAt}</p>
-${state.currentUser.role === "accountant" 
-  ? `<button class="delete-order-btn" data-order-id="${order.id}">🗑 Устгах</button>` 
+${canDelete
+  ? `<button class="delete-order-btn" data-order-id="${order.id}">🗑 Устгах</button>`
   : ""}
 </article>    
       `;
@@ -869,8 +946,12 @@ document.querySelectorAll("[data-order-status]").forEach((select) => {
   });
   document.querySelectorAll(".delete-order-btn").forEach((button) => {
     button.addEventListener("click", () => {
-      if (state.currentUser.role !== "accountant") return;
-      if (!confirm("Зөвхөн нягтлан захиалга устгана. Энэ захиалгыг бүр мөсөн устгах уу?")) return;
+      const order = state.orders.find((item) => String(item.id) === button.dataset.orderId);
+      if (!order || order.status === "paid") return;
+      const canDelete =
+        state.currentUser.role === "accountant" || (state.currentUser.role === "sales" && order.salesperson === state.currentUser.name);
+      if (!canDelete) return;
+      if (!confirm("Энэ төлөгдөөгүй захиалгыг устгах уу?")) return;
       state.orders = state.orders.filter(
         (order) => String(order.id) !== button.dataset.orderId
       );
@@ -879,59 +960,90 @@ document.querySelectorAll("[data-order-status]").forEach((select) => {
     });
   });
 }
-function renderAccountingView() {
-  view.innerHTML = document.querySelector("#accounting-view").innerHTML;
-  if (state.currentUser.role === "staff") {
-    const profile = ensureProfile(state.currentUser.name);
-    document.querySelector("#accounting-stats").innerHTML = [
-      ["Нэр", profile.name || state.currentUser.name],
-      ["И-мэйл", profile.email || "-"],
-      ["Утас", profile.phone || "-"],
-      ["Нас", profile.age || "-"],
-    ]
-      .map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`)
-      .join("");
-    document.querySelector("#sales-index-panel").classList.add("hidden");
-    document.querySelector("#income-panel").classList.add("hidden");
-    document.querySelector("#top-products-panel").classList.add("hidden");
-    document.querySelector("#download-income-report").classList.add("hidden");
-    document.querySelector("#accounting-list").innerHTML = "";
-    return;
-  }
 
-  const metrics = salesMetrics("all");
-  const income = incomeMetrics();
-  document.querySelector("#accounting-stats").innerHTML = [
-    ["Нийт орлого", money(income.totalIncome)],
-    ["Хүлээгдэж буй", money(income.expectedIncome)],
-    ["Сарын захиалга", metrics.monthlyOrders.length],
-    ["Төлөгдсөн захиалга", income.paidOrders],
-  ]
-    .map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`)
-    .join("");
-
-  document.querySelector("#download-income-report").addEventListener("click", downloadMonthlyIncomeReport);
-
-  document.querySelector("#income-panel").innerHTML = `
-    <div class="section-heading">
-      <h3>Орлогын index</h3>
-      <span>${currentMonth()}</span>
-    </div>
-    <div class="summary-grid in-panel">
-      <article class="summary-card"><span>Дансаар</span><strong>${money(metrics.bank)}</strong></article>
-      <article class="summary-card"><span>Бэлнээр</span><strong>${money(metrics.cash)}</strong></article>
-      <article class="summary-card"><span>Төлөгдөөгүй үлдэгдэл</span><strong>${money(income.unpaidIncome)}</strong></article>
-      <article class="summary-card"><span>Орлогын биелэлт</span><strong>${income.expectedIncome ? Math.round((income.totalIncome / income.expectedIncome) * 100) : 0}%</strong></article>
+function renderReportFilters() {
+  const target = document.querySelector("#income-report-tools");
+  if (!target) return;
+  target.innerHTML = `
+    <div class="report-filter-grid">
+      <label>
+        Хугацаа
+        <select id="income-report-period">
+          <option value="month" ${state.incomeReportPeriod === "month" ? "selected" : ""}>Сараар</option>
+          <option value="day" ${state.incomeReportPeriod === "day" ? "selected" : ""}>Өдрөөр</option>
+        </select>
+      </label>
+      <label class="${state.incomeReportPeriod === "day" ? "" : "hidden"}">
+        Өдөр
+        <input id="income-report-date" type="date" value="${state.incomeReportDate || today()}" />
+      </label>
+      <label class="${state.incomeReportPeriod === "month" ? "" : "hidden"}">
+        Сар
+        <input id="income-report-month" type="month" value="${state.incomeReportMonth || currentMonth()}" />
+      </label>
+      <label>
+        Борлуулагч
+        <select id="income-report-person">
+          <option value="all" ${state.incomeReportSalesperson === "all" ? "selected" : ""}>Бүгд</option>
+          ${salespersonNames()
+            .map((name) => `<option value="${name}" ${state.incomeReportSalesperson === name ? "selected" : ""}>${name}</option>`)
+            .join("")}
+        </select>
+      </label>
     </div>
   `;
 
+  document.querySelector("#income-report-period").addEventListener("change", (event) => {
+    state.incomeReportPeriod = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
+  document.querySelector("#income-report-date").addEventListener("change", (event) => {
+    state.incomeReportDate = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
+  document.querySelector("#income-report-month").addEventListener("change", (event) => {
+    state.incomeReportMonth = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
+  document.querySelector("#income-report-person").addEventListener("change", (event) => {
+    state.incomeReportSalesperson = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
+}
+
+function renderProductReportPanel() {
+  const orders = productReportOrders();
+  const products = topProducts(orders);
+  const totalQuantity = products.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const totalAmount = products.reduce((sum, item) => sum + Number(item.total || 0), 0);
   document.querySelector("#top-products-panel").innerHTML = `
     <div class="section-heading">
       <h3>Их зарагдсан бараа</h3>
-      <span>Тоо ширхэгээр</span>
+      <span>${reportLabel(state.productReportPeriod, state.productReportDate, state.productReportMonth)}</span>
+    </div>
+    <div class="report-filter-grid">
+      <label>
+        Хугацаа
+        <select id="product-report-period">
+          <option value="month" ${state.productReportPeriod === "month" ? "selected" : ""}>Сараар</option>
+          <option value="day" ${state.productReportPeriod === "day" ? "selected" : ""}>Өдрөөр</option>
+        </select>
+      </label>
+      <label class="${state.productReportPeriod === "day" ? "" : "hidden"}">
+        Өдөр
+        <input id="product-report-date" type="date" value="${state.productReportDate || today()}" />
+      </label>
+      <label class="${state.productReportPeriod === "month" ? "" : "hidden"}">
+        Сар
+        <input id="product-report-month" type="month" value="${state.productReportMonth || currentMonth()}" />
+      </label>
     </div>
     <div class="rank-list">
-      ${topProducts()
+      ${products
         .map(
           (item, index) => `
             <article class="rank-item">
@@ -943,9 +1055,64 @@ function renderAccountingView() {
             </article>
           `,
         )
-        .join("")}
+        .join("") || `<p class="empty-note">Энэ хугацаанд барааны борлуулалт алга.</p>`}
+    </div>
+    <div class="summary-grid in-panel">
+      <article class="summary-card"><span>Нийт ширхэг</span><strong>${totalQuantity}ш</strong></article>
+      <article class="summary-card"><span>Нийт дүн</span><strong>${money(totalAmount)}</strong></article>
+    </div>
+    <button id="download-product-report" class="secondary-action report-action" type="button">Барааны тайлан татах</button>
+  `;
+
+  document.querySelector("#product-report-period").addEventListener("change", (event) => {
+    state.productReportPeriod = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
+  document.querySelector("#product-report-date").addEventListener("change", (event) => {
+    state.productReportDate = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
+  document.querySelector("#product-report-month").addEventListener("change", (event) => {
+    state.productReportMonth = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
+  document.querySelector("#download-product-report").addEventListener("click", downloadProductReport);
+}
+
+function renderAccountingView() {
+  view.innerHTML = document.querySelector("#accounting-view").innerHTML;
+  const reportOrders = incomeReportOrders();
+  const income = incomeMetrics(reportOrders);
+  const periodText = reportLabel(state.incomeReportPeriod, state.incomeReportDate, state.incomeReportMonth);
+  document.querySelector("#accounting-stats").innerHTML = [
+    ["Нийт орлого", money(income.totalIncome)],
+    ["Хүлээгдэж буй", money(income.expectedIncome)],
+    ["Захиалга", income.orders.length],
+    ["Төлөгдсөн захиалга", income.paidOrders],
+  ]
+    .map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`)
+    .join("");
+
+  renderReportFilters();
+  document.querySelector("#download-income-report").addEventListener("click", downloadIncomeReport);
+
+  document.querySelector("#income-panel").innerHTML = `
+    <div class="section-heading">
+      <h3>Орлогын index</h3>
+      <span>${periodText}</span>
+    </div>
+    <div class="summary-grid in-panel">
+      <article class="summary-card"><span>Дансаар</span><strong>${money(reportOrders.filter((order) => order.payment === "bank").reduce((sum, order) => sum + Number(order.paid || 0), 0))}</strong></article>
+      <article class="summary-card"><span>Бэлнээр</span><strong>${money(reportOrders.filter((order) => order.payment === "cash").reduce((sum, order) => sum + Number(order.paid || 0), 0))}</strong></article>
+      <article class="summary-card"><span>Төлөгдөөгүй үлдэгдэл</span><strong>${money(income.unpaidIncome)}</strong></article>
+      <article class="summary-card"><span>Орлогын биелэлт</span><strong>${income.expectedIncome ? Math.round((income.totalIncome / income.expectedIncome) * 100) : 0}%</strong></article>
     </div>
   `;
+
+  renderProductReportPanel();
 
   document.querySelector("#sales-index-panel").innerHTML = `
     <div class="section-heading">
