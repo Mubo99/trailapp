@@ -32,6 +32,7 @@ const demoState = {
   activeTab: "order",
   selectedPayment: "bank",
   selectedSalesperson: "all",
+  orderSalesperson: "",
   incomeReportPeriod: "month",
   incomeReportDate: "",
   incomeReportMonth: "",
@@ -495,6 +496,7 @@ function loadState() {
     (user, index, users) => users.findIndex((item) => item.username === user.username) === index,
   ).filter((user) => user.role !== "staff");
   initialState.selectedSalesperson = initialState.selectedSalesperson || "all";
+  initialState.orderSalesperson = initialState.orderSalesperson || salespersonNamesFromState(initialState)[0] || "";
   if (initialState.selectedSalesperson !== "all" && !initialState.users.some((user) => user.role === "sales" && user.name === initialState.selectedSalesperson)) {
     initialState.selectedSalesperson = "all";
   }
@@ -535,6 +537,7 @@ function prepareRuntimeState(target) {
   target.incomeReportMonth = target.incomeReportMonth || currentMonth();
   target.productReportDate = target.productReportDate || today();
   target.productReportMonth = target.productReportMonth || currentMonth();
+  target.orderSalesperson = target.orderSalesperson || salespersonNamesFromState(target)[0] || "";
 }
 
 function normalizeOrder(order) {
@@ -596,10 +599,14 @@ function employeeNames() {
 }
 
 function salespersonNames() {
+  return salespersonNamesFromState(state);
+}
+
+function salespersonNamesFromState(source) {
   return [
     ...new Set([
-      ...state.users.filter((user) => user.role === "sales").map((user) => user.name),
-      ...state.orders.map((order) => order.salesperson),
+      ...(source.users || []).filter((user) => user.role === "sales").map((user) => user.name),
+      ...(source.orders || []).map((order) => order.salesperson),
     ]),
   ].filter(Boolean);
 }
@@ -944,6 +951,7 @@ function renderOrderView() {
   if (state.currentUser.role === "accountant") {
     renderPersonSelect("#accountant-order-tools", state.selectedSalesperson, (value) => {
       state.selectedSalesperson = value;
+      if (value !== "all") state.orderSalesperson = value;
       saveState();
       renderOrderView();
     });
@@ -953,6 +961,7 @@ function renderOrderView() {
     document.querySelector("#sales-dashboard").remove();
   }
 
+  renderAccountantOrderOwner();
   customerInput.value = state.draftCustomer;
   const catalog = state.products.length ? state.products : defaultProductCatalog;
   productSelect.innerHTML = catalog.map((item) => `<option value="${item.name}">${item.name}</option>`).join("");
@@ -1000,7 +1009,7 @@ function renderOrderView() {
   document.querySelector("#order-form").addEventListener("submit", (event) => {
     event.preventDefault();
     if (!state.draftItems.length) return;
-    const salesperson = state.currentUser.role === "accountant" ? state.selectedSalesperson : state.currentUser.name;
+    const salesperson = state.currentUser.role === "accountant" ? state.orderSalesperson : state.currentUser.name;
     if (!salesperson || salesperson === "all") {
       alert("Захиалга үүсгэх борлуулагчаа сонгоно уу.");
       return;
@@ -1024,6 +1033,31 @@ function renderOrderView() {
   });
 
   renderOrderList("#order-list", scopedOrders);
+}
+
+function renderAccountantOrderOwner() {
+  const target = document.querySelector("#accountant-order-owner");
+  if (!target) return;
+  if (state.currentUser.role !== "accountant") {
+    target.innerHTML = "";
+    return;
+  }
+  const names = salespersonNames();
+  if (!names.includes(state.orderSalesperson)) state.orderSalesperson = names[0] || "";
+  target.innerHTML = `
+    <section class="order-owner-card">
+      <label>
+        Энэ захиалгыг хэнд үүсгэх вэ?
+        <select id="order-salesperson">
+          ${names.map((name) => `<option value="${name}" ${state.orderSalesperson === name ? "selected" : ""}>${name}</option>`).join("")}
+        </select>
+      </label>
+    </section>
+  `;
+  target.querySelector("#order-salesperson").addEventListener("change", (event) => {
+    state.orderSalesperson = event.target.value;
+    saveState();
+  });
 }
 
 function renderDraftItems() {

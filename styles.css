@@ -807,6 +807,20 @@ select:focus {
   background: #f6faff;
 }
 
+.order-owner-card {
+  margin: 4px 0 14px;
+  padding: 12px;
+  border: 1px solid rgba(8, 93, 255, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(8, 93, 255, 0.08), rgba(24, 210, 255, 0.06)),
+    #f8fbff;
+}
+
+.order-owner-card label {
+  margin-bottom: 0;
+}
+
 .draft-items {
   margin: 12px 0 16px;
 }
