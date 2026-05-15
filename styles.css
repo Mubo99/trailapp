@@ -441,6 +441,18 @@ select:focus {
   margin-top: 14px;
 }
 
+.filter-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(8, 93, 255, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(8, 93, 255, 0.08), rgba(24, 210, 255, 0.06)),
+    #f8fbff;
+}
+
 .danger-action {
   margin-top: 10px;
   background: #fff0f3;
@@ -451,6 +463,23 @@ select:focus {
   border: 1px solid rgba(8, 93, 255, 0.24);
   background: #edf5ff;
   color: var(--blue-dark);
+}
+
+.compact-action {
+  min-height: 38px;
+  margin-top: 0;
+  font-size: 13px;
+}
+
+.mini-row,
+.admin-action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.admin-action-grid {
+  margin-top: 14px;
 }
 
 .mini-action {
@@ -537,6 +566,20 @@ select:focus {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #f8fbff;
+}
+
+.editable-profile {
+  margin-bottom: 12px;
+}
+
+.admin-user-card,
+.product-admin-card {
+  align-items: flex-start;
+}
+
+.admin-user-card > div,
+.product-admin-card > div {
+  width: 100%;
 }
 
 .profile-card img,

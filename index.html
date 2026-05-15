@@ -22,7 +22,12 @@
           <div class="role-card-list">
             <button class="role-card" type="button" data-login-role="accountant">
               <span class="role-icon">▣</span>
-              <span><strong>Нягтлан</strong><small>Системийн админ</small></span>
+              <span><strong>Нягтлан</strong><small>Тайлан, захиалга</small></span>
+              <i>›</i>
+            </button>
+            <button class="role-card" type="button" data-login-role="admin">
+              <span class="role-icon">■</span>
+              <span><strong>Admin</strong><small>Системийн тохиргоо</small></span>
               <i>›</i>
             </button>
             <button class="role-card" type="button" data-login-role="sales">
@@ -51,6 +56,7 @@
               <select id="role-select">
                 <option value="sales">Борлуулагч</option>
                 <option value="accountant">Нягтлан</option>
+                <option value="admin">Admin</option>
               </select>
             </label>
             <label>
@@ -95,8 +101,8 @@
           </div>
           <div class="menu-actions">
             <button type="button" data-menu-view="profile">Профайл</button>
-            <button type="button" data-menu-view="edit">Засах</button>
             <button type="button" data-menu-view="employees">Ажилчид</button>
+            <button type="button" data-menu-view="products">Бараа</button>
             <button type="button" data-menu-view="plans">Төлөвлөгөө</button>
           </div>
           <div id="menu-content"></div>
@@ -107,12 +113,12 @@
 
     <template id="sales-view">
       <div id="sales-dashboard"></div>
-      <section class="tool-panel">
+      <section class="tool-panel archive-panel">
         <div class="section-heading">
           <h3>Төлөгдсөн захиалгын архив</h3>
           <span>Өдөр / нэр</span>
         </div>
-        <div class="field-grid archive-filters">
+        <div class="filter-card archive-filters">
           <label>
             Өдөр
             <input id="archive-date-filter" type="date" />

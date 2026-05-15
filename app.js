@@ -4,7 +4,7 @@ const sb = createClient(
   "sb_publishable_BHQuFWv05h0CpZ_gFRz7xA_u8-kwHsD"
 );
 
-const productCatalog = [
+const defaultProductCatalog = [
   { name: "Цай 500гр", price: 25000 },
   { name: "Кофе 1кг", price: 42000 },
   { name: "Ундаа 1л", price: 3500 },
@@ -17,12 +17,14 @@ const salesTargets = {
   Бат: 12000000,
   Саруул: 10000000,
   bat: 8000000,
+  admin: 0,
 };
 
 const defaultProfiles = {
   Бат: { name: "Бат", email: "bat@batmon.mn", phone: "99110011", age: 29, role: "Борлуулагч", photo: "./assets/batmon-icon.png" },
   Саруул: { name: "Саруул", email: "saruul@batmon.mn", phone: "99220022", age: 27, role: "Борлуулагч", photo: "./assets/batmon-icon.png" },
   bat: { name: "bat", email: "bat@batmon.mn", phone: "99000000", age: 30, role: "Нягтлан", photo: "./assets/batmon-icon.png" },
+  admin: { name: "admin", email: "admin@batmon.mn", phone: "99001122", age: 30, role: "Admin", photo: "./assets/batmon-icon.png" },
 };
 
 const demoState = {
@@ -43,8 +45,10 @@ const demoState = {
   draftItems: [],
   monthlyTarget: 30000000,
   salesTargets: structuredClone(salesTargets),
+  products: structuredClone(defaultProductCatalog),
   profiles: structuredClone(defaultProfiles),
   users: [
+    { username: "admin", password: "1234", name: "admin", role: "admin" },
     { username: "bat", password: "1234", name: "bat", role: "accountant" },
     { username: "bat-sales", password: "1234", name: "Бат", role: "sales" },
     { username: "saruul", password: "1234", name: "Саруул", role: "sales" },
@@ -101,16 +105,22 @@ const tabs = document.querySelector("#tabs");
 const view = document.querySelector("#view");
 
 const roleLabels = {
+  admin: "Admin",
   sales: "Борлуулагч",
   accountant: "Нягтлан",
 };
 
 const loginRoleMeta = {
-  accountant: { label: "Нягтлан", desc: "Системийн админ", icon: "▣" },
+  admin: { label: "Admin", desc: "Системийн тохиргоо", icon: "■" },
+  accountant: { label: "Нягтлан", desc: "Тайлан, захиалга", icon: "▣" },
   sales: { label: "Борлуулагч", desc: "Борлуулалтын ажилтан", icon: "◆" },
 };
 
 const tabMap = {
+  admin: [
+    { id: "admin", label: "Удирдлага" },
+    { id: "accounting", label: "Тайлан" },
+  ],
   sales: [
     { id: "order", label: "Захиалга" },
     { id: "sales", label: "Борлуулалт" },
@@ -184,6 +194,7 @@ function updateSelectedRole() {
 }
 
 function defaultTabForRole(role) {
+  if (role === "admin") return "admin";
   if (role === "accountant") return "accounting";
   return "order";
 }
@@ -209,43 +220,46 @@ function renderUserMenu(view = "profile") {
   const profile = ensureProfile();
   document.querySelectorAll("[data-menu-view]").forEach((button) => {
     button.classList.toggle("active", button.dataset.menuView === view);
-    if (button.dataset.menuView === "plans") {
-      button.classList.toggle("hidden", state.currentUser.role !== "accountant");
+    if (["employees", "products", "plans"].includes(button.dataset.menuView)) {
+      button.classList.toggle("hidden", state.currentUser.role !== "admin");
     }
   });
-  if (view === "edit") return renderProfileEditor(profile);
-  if (view === "employees") return renderEmployeesMenu();
-  if (view === "plans" && state.currentUser.role === "accountant") return renderPlanSettings();
+  if (view === "employees" && state.currentUser.role === "admin") return renderEmployeesMenu();
+  if (view === "products" && state.currentUser.role === "admin") return renderProductsMenu();
+  if (view === "plans" && state.currentUser.role === "admin") return renderPlanSettings();
+  renderProfileEditor(profile);
+}
+
+function renderProfileEditor(profile) {
   menuTitle.textContent = "Профайл";
   menuContent.innerHTML = `
-    <article class="profile-card">
-      <img src="${profile.photo || "./assets/batmon-icon.png"}" alt="" />
+    <article class="profile-card editable-profile">
+      <img id="profile-preview" src="${profile.photo || "./assets/batmon-icon.png"}" alt="" />
       <div>
         <h4>${profile.name}</h4>
         <span>${profile.role || roleLabels[state.currentUser.role]}</span>
       </div>
     </article>
-    <div class="profile-details">
-      <p><strong>И-мэйл</strong><span>${profile.email || "-"}</span></p>
-      <p><strong>Утас</strong><span>${profile.phone || "-"}</span></p>
-      <p><strong>Нас</strong><span>${profile.age || "-"}</span></p>
-      <p><strong>Эрх</strong><span>${roleLabels[state.currentUser.role]}</span></p>
-    </div>
-  `;
-}
-
-function renderProfileEditor(profile) {
-  menuTitle.textContent = "Профайл засах";
-  menuContent.innerHTML = `
     <form id="profile-form" class="menu-form">
       <label>Нэр<input id="profile-name" value="${profile.name || ""}" /></label>
       <label>И-мэйл<input id="profile-email" value="${profile.email || ""}" /></label>
       <label>Утас<input id="profile-phone" value="${profile.phone || ""}" /></label>
       <label>Нас<input id="profile-age" type="number" min="16" value="${profile.age || ""}" /></label>
-      <label>Зураг URL<input id="profile-photo" value="${profile.photo || "./assets/batmon-icon.png"}" /></label>
+      <label>Зураг upload<input id="profile-photo-file" type="file" accept="image/*" /></label>
       <button class="primary-action" type="submit">Хадгалах</button>
     </form>
   `;
+  let nextPhoto = profile.photo || "./assets/batmon-icon.png";
+  document.querySelector("#profile-photo-file").addEventListener("change", (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      nextPhoto = reader.result;
+      document.querySelector("#profile-preview").src = nextPhoto;
+    });
+    reader.readAsDataURL(file);
+  });
   document.querySelector("#profile-form").addEventListener("submit", (event) => {
     event.preventDefault();
     const oldName = state.currentUser.name;
@@ -256,7 +270,7 @@ function renderProfileEditor(profile) {
       phone: document.querySelector("#profile-phone").value.trim(),
       age: document.querySelector("#profile-age").value,
       role: profile.role || roleLabels[state.currentUser.role],
-      photo: document.querySelector("#profile-photo").value.trim() || "./assets/batmon-icon.png",
+      photo: nextPhoto || "./assets/batmon-icon.png",
     };
     if (newName !== oldName) {
       delete state.profiles[oldName];
@@ -276,9 +290,9 @@ function renderProfileEditor(profile) {
 function renderEmployeesMenu() {
   menuTitle.textContent = "Ажилчид";
   menuContent.innerHTML = `
-    ${state.currentUser.role === "accountant" ? `
+    ${state.currentUser.role === "admin" ? `
       <details class="add-user-panel">
-        <summary>Шинэ ажилтан нэмэх</summary>
+        <summary>Шинэ хэрэглэгч нэмэх</summary>
         <form id="add-user-form" class="menu-form">
           <label>Нэр<input id="new-user-name" required /></label>
           <label>
@@ -286,6 +300,7 @@ function renderEmployeesMenu() {
             <select id="new-user-role">
               <option value="sales">Борлуулагч</option>
               <option value="accountant">Нягтлан</option>
+              <option value="admin">Admin</option>
             </select>
           </label>
           <label>Нэвтрэх нэр<input id="new-user-username" required /></label>
@@ -293,22 +308,27 @@ function renderEmployeesMenu() {
           <label>И-мэйл<input id="new-user-email" type="email" /></label>
           <label>Утас<input id="new-user-phone" /></label>
           <label>Нас<input id="new-user-age" type="number" min="16" /></label>
-          <label>Зураг URL<input id="new-user-photo" value="./assets/batmon-icon.png" /></label>
           <label>Сарын борлуулалтын төлөвлөгөө<input id="new-user-sales-target" type="number" min="0" value="8000000" /></label>
           <button class="primary-action" type="submit">Хэрэглэгч нэмэх</button>
         </form>
       </details>
     ` : ""}
     <div class="employee-list">
-      ${employeeNames()
-        .map((name) => {
-          const profile = ensureProfile(name);
+      ${state.users
+        .map((user, index) => {
+          const profile = ensureProfile(user.name);
           return `
-            <article class="employee-item">
+            <article class="employee-item admin-user-card">
               <img src="${profile.photo || "./assets/batmon-icon.png"}" alt="" />
               <div>
                 <h4>${profile.name}</h4>
-                <span>${profile.phone || "Утас бүртгээгүй"}</span>
+                <span>${roleLabels[user.role]} · ${profile.phone || "Утас бүртгээгүй"}</span>
+                <label>Нэвтрэх нэр<input data-user-field="username" data-user-index="${index}" value="${user.username}" /></label>
+                <label>Code<input data-user-field="password" data-user-index="${index}" value="${user.password}" /></label>
+                <div class="mini-row">
+                  <button class="secondary-action compact-action" type="button" data-save-user="${index}">Хадгалах</button>
+                  ${user.name === state.currentUser.name ? "" : `<button class="danger-action compact-action" type="button" data-delete-user="${index}">Устгах</button>`}
+                </div>
               </div>
             </article>
           `;
@@ -318,6 +338,31 @@ function renderEmployeesMenu() {
   `;
   const addUserForm = document.querySelector("#add-user-form");
   if (addUserForm) addUserForm.addEventListener("submit", addNewUser);
+  document.querySelectorAll("[data-save-user]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.saveUser);
+      const user = state.users[index];
+      if (!user) return;
+      user.username = document.querySelector(`[data-user-field="username"][data-user-index="${index}"]`).value.trim();
+      user.password = document.querySelector(`[data-user-field="password"][data-user-index="${index}"]`).value;
+      saveState();
+      renderUserMenu("employees");
+    });
+  });
+  document.querySelectorAll("[data-delete-user]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.deleteUser);
+      const user = state.users[index];
+      if (!user || user.name === state.currentUser.name) return;
+      if (!confirm(`${user.name} хэрэглэгчийг устгах уу?`)) return;
+      state.users.splice(index, 1);
+      delete state.profiles[user.name];
+      delete state.salesTargets[user.name];
+      saveState();
+      renderApp();
+      renderUserMenu("employees");
+    });
+  });
 }
 
 function addNewUser(event) {
@@ -340,12 +385,70 @@ function addNewUser(event) {
     phone: document.querySelector("#new-user-phone").value.trim(),
     age: document.querySelector("#new-user-age").value,
     role: roleLabels[newUser.role],
-    photo: document.querySelector("#new-user-photo").value.trim() || "./assets/batmon-icon.png",
+    photo: "./assets/batmon-icon.png",
   };
   state.salesTargets[newUser.name] = Number(document.querySelector("#new-user-sales-target").value || 0);
   saveState();
   renderApp();
   renderUserMenu("employees");
+}
+
+function renderProductsMenu() {
+  menuTitle.textContent = "Бараа";
+  menuContent.innerHTML = `
+    <form id="product-form" class="menu-form">
+      <label>Барааны нэр<input id="new-product-name" required /></label>
+      <label>Үнэ<input id="new-product-price" type="number" min="0" value="0" required /></label>
+      <button class="primary-action" type="submit">Бараа нэмэх</button>
+    </form>
+    <div class="employee-list">
+      ${state.products
+        .map(
+          (product, index) => `
+            <article class="employee-item product-admin-card">
+              <div>
+                <label>Нэр<input data-product-field="name" data-product-index="${index}" value="${product.name}" /></label>
+                <label>Үнэ<input data-product-field="price" data-product-index="${index}" type="number" min="0" value="${product.price}" /></label>
+                <div class="mini-row">
+                  <button class="secondary-action compact-action" type="button" data-save-product="${index}">Хадгалах</button>
+                  <button class="danger-action compact-action" type="button" data-delete-product="${index}">Устгах</button>
+                </div>
+              </div>
+            </article>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+  document.querySelector("#product-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const name = document.querySelector("#new-product-name").value.trim();
+    const price = Number(document.querySelector("#new-product-price").value || 0);
+    if (!name) return;
+    state.products.push({ name, price });
+    saveState();
+    renderUserMenu("products");
+  });
+  document.querySelectorAll("[data-save-product]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.saveProduct);
+      if (!state.products[index]) return;
+      state.products[index].name = document.querySelector(`[data-product-field="name"][data-product-index="${index}"]`).value.trim();
+      state.products[index].price = Number(document.querySelector(`[data-product-field="price"][data-product-index="${index}"]`).value || 0);
+      saveState();
+      renderUserMenu("products");
+    });
+  });
+  document.querySelectorAll("[data-delete-product]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.deleteProduct);
+      if (!state.products[index]) return;
+      if (!confirm(`${state.products[index].name} барааг устгах уу?`)) return;
+      state.products.splice(index, 1);
+      saveState();
+      renderUserMenu("products");
+    });
+  });
 }
 
 function renderPlanSettings() {
@@ -355,7 +458,7 @@ function renderPlanSettings() {
       <label>
         Хэрэглэгч
         <select id="plan-person">
-          ${employeeNames().map((name) => `<option value="${name}">${name}</option>`).join("")}
+          ${salespersonNames().map((name) => `<option value="${name}">${name}</option>`).join("")}
         </select>
       </label>
       <label>Сарын борлуулалтын төлөвлөгөө<input id="plan-sales" type="number" min="0" /></label>
@@ -386,6 +489,7 @@ function loadState() {
   initialState.draftCustomer = initialState.draftCustomer || "";
   initialState.monthlyTarget = Number(initialState.monthlyTarget || demoState.monthlyTarget);
   initialState.salesTargets = { ...salesTargets, ...(initialState.salesTargets || {}) };
+  initialState.products = Array.isArray(initialState.products) ? initialState.products : structuredClone(defaultProductCatalog);
   initialState.profiles = { ...structuredClone(defaultProfiles), ...(initialState.profiles || {}) };
   initialState.users = [...(demoState.users || []), ...(initialState.users || [])].filter(
     (user, index, users) => users.findIndex((item) => item.username === user.username) === index,
@@ -404,6 +508,7 @@ function loadState() {
   initialState.archiveDateFilter = initialState.archiveDateFilter || "";
   initialState.archiveNameFilter = initialState.archiveNameFilter || "";
   const validTabs = {
+    admin: ["admin", "accounting"],
     sales: ["order", "sales"],
     accountant: ["accounting", "order"],
   };
@@ -412,6 +517,24 @@ function loadState() {
     initialState.activeTab = defaultTabForRole(initialState.currentUser?.role);
   }
   return initialState;
+}
+
+function prepareRuntimeState(target) {
+  target.products = Array.isArray(target.products) ? target.products : structuredClone(defaultProductCatalog);
+  target.users = [...(demoState.users || []), ...(target.users || [])]
+    .filter((user, index, users) => users.findIndex((item) => item.username === user.username) === index)
+    .filter((user) => user.role !== "staff");
+  target.profiles = { ...structuredClone(defaultProfiles), ...(target.profiles || {}) };
+  target.salesTargets = { ...salesTargets, ...(target.salesTargets || {}) };
+  target.orders = (target.orders || []).map(normalizeOrder);
+  if (target.currentUser?.role === "staff") target.currentUser = null;
+  if (target.currentUser && !tabMap[target.currentUser.role]?.some((tab) => tab.id === target.activeTab)) {
+    target.activeTab = defaultTabForRole(target.currentUser.role);
+  }
+  target.incomeReportDate = target.incomeReportDate || today();
+  target.incomeReportMonth = target.incomeReportMonth || currentMonth();
+  target.productReportDate = target.productReportDate || today();
+  target.productReportMonth = target.productReportMonth || currentMonth();
 }
 
 function normalizeOrder(order) {
@@ -578,7 +701,7 @@ function renderSalesDashboard(person = "all") {
 }
 
 function salesPeopleIndex() {
-  const names = new Set([...Object.keys(state.salesTargets || {}), ...state.orders.map((order) => order.salesperson)]);
+  const names = new Set(salespersonNames());
   return [...names]
     .map((name) => {
       const total = state.orders
@@ -757,12 +880,41 @@ function renderTabs() {
 }
 
 function renderView() {
+  if (state.activeTab === "admin") return renderAdminView();
   if (state.activeTab === "sales" && state.currentUser.role !== "accountant") return renderSalesView();
   if (state.activeTab === "order") return renderOrderView();
   if (state.activeTab === "accounting") return renderAccountingView();
   state.activeTab = defaultTabForRole(state.currentUser.role);
   saveState();
   return renderView();
+}
+
+function renderAdminView() {
+  view.innerHTML = `
+    <section class="dashboard-card admin-home">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Admin</p>
+          <h3>Системийн удирдлага</h3>
+        </div>
+      </div>
+      <div class="summary-grid in-panel">
+        <article class="summary-card"><span>Хэрэглэгч</span><strong>${state.users.length}</strong></article>
+        <article class="summary-card"><span>Бараа</span><strong>${state.products.length}</strong></article>
+        <article class="summary-card"><span>Борлуулагч</span><strong>${salespersonNames().length}</strong></article>
+        <article class="summary-card"><span>Захиалга</span><strong>${state.orders.length}</strong></article>
+      </div>
+      <div class="admin-action-grid">
+        <button class="secondary-action" type="button" data-admin-open="employees">Ажилчид</button>
+        <button class="secondary-action" type="button" data-admin-open="products">Бараа</button>
+        <button class="secondary-action" type="button" data-admin-open="plans">Төлөвлөгөө</button>
+        <button class="secondary-action" type="button" data-admin-open="profile">Профайл</button>
+      </div>
+    </section>
+  `;
+  document.querySelectorAll("[data-admin-open]").forEach((button) => {
+    button.addEventListener("click", () => openUserMenu(button.dataset.adminOpen));
+  });
 }
 
 function renderSalesView() {
@@ -787,28 +939,28 @@ function renderOrderView() {
   const productSelect = document.querySelector("#product");
   const priceInput = document.querySelector("#price");
   const paidInput = document.querySelector("#paid");
+  let scopedOrders = state.orders.filter((order) => order.salesperson === state.currentUser.name && order.status !== "paid");
 
   if (state.currentUser.role === "accountant") {
-    document.querySelector("#order-form").classList.add("hidden");
     renderPersonSelect("#accountant-order-tools", state.selectedSalesperson, (value) => {
       state.selectedSalesperson = value;
       saveState();
       renderOrderView();
     });
     renderSalesDashboard(state.selectedSalesperson);
-    const scopedOrders = state.selectedSalesperson === "all" ? state.orders : state.orders.filter((order) => order.salesperson === state.selectedSalesperson);
-    renderOrderList("#order-list", scopedOrders);
-    return;
+    scopedOrders = state.selectedSalesperson === "all" ? state.orders : state.orders.filter((order) => order.salesperson === state.selectedSalesperson);
+  } else {
+    document.querySelector("#sales-dashboard").remove();
   }
 
-  document.querySelector("#sales-dashboard").remove();
   customerInput.value = state.draftCustomer;
-  productSelect.innerHTML = productCatalog.map((item) => `<option value="${item.name}">${item.name}</option>`).join("");
-  priceInput.value = productCatalog[0].price;
-  paidInput.value = draftTotal() || productCatalog[0].price;
+  const catalog = state.products.length ? state.products : defaultProductCatalog;
+  productSelect.innerHTML = catalog.map((item) => `<option value="${item.name}">${item.name}</option>`).join("");
+  priceInput.value = catalog[0]?.price || 0;
+  paidInput.value = draftTotal() || catalog[0]?.price || 0;
 
   productSelect.addEventListener("change", () => {
-    const selected = productCatalog.find((item) => item.name === productSelect.value);
+    const selected = catalog.find((item) => item.name === productSelect.value);
     priceInput.value = selected?.price || 0;
   });
 
@@ -848,11 +1000,16 @@ function renderOrderView() {
   document.querySelector("#order-form").addEventListener("submit", (event) => {
     event.preventDefault();
     if (!state.draftItems.length) return;
+    const salesperson = state.currentUser.role === "accountant" ? state.selectedSalesperson : state.currentUser.name;
+    if (!salesperson || salesperson === "all") {
+      alert("Захиалга үүсгэх борлуулагчаа сонгоно уу.");
+      return;
+    }
     const total = draftTotal();
     const paid = Number(paidInput.value);
     state.orders.unshift({
       id: Date.now(),
-      salesperson: state.currentUser.name,
+      salesperson,
       customer: customerInput.value,
       items: structuredClone(state.draftItems),
       paid,
@@ -866,10 +1023,7 @@ function renderOrderView() {
     renderApp();
   });
 
-  renderOrderList(
-    "#order-list",
-    state.orders.filter((order) => order.salesperson === state.currentUser.name && order.status !== "paid"),
-  );
+  renderOrderList("#order-list", scopedOrders);
 }
 
 function renderDraftItems() {
@@ -965,7 +1119,7 @@ function renderReportFilters() {
   const target = document.querySelector("#income-report-tools");
   if (!target) return;
   target.innerHTML = `
-    <div class="report-filter-grid">
+    <div class="report-filter-grid filter-card">
       <label>
         Хугацаа
         <select id="income-report-period">
@@ -1025,7 +1179,7 @@ function renderProductReportPanel() {
       <h3>Их зарагдсан бараа</h3>
       <span>${reportLabel(state.productReportPeriod, state.productReportDate, state.productReportMonth)}</span>
     </div>
-    <div class="report-filter-grid">
+    <div class="report-filter-grid filter-card">
       <label>
         Хугацаа
         <select id="product-report-period">
@@ -1142,6 +1296,7 @@ function renderAccountingView() {
 (async () => {
   const { data } = await sb.from("app_state").select("data").eq("id", 1).maybeSingle();
   if (data?.data) Object.assign(state, data.data);
+  prepareRuntimeState(state);
   renderApp();
 })();
 
