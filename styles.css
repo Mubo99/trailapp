@@ -2102,14 +2102,14 @@ select:focus {
 .prompt-home {
   min-height: 844px;
   margin: 0 -14px;
-  padding-bottom: 116px;
+  padding-bottom: 104px;
   background: #f7f9fd;
   color: #081233;
 }
 
 .prompt-home-hero {
-  height: 220px;
-  padding: 24px;
+  height: 210px;
+  padding: 20px 24px;
   border-radius: 0 0 32px 32px;
   background: linear-gradient(135deg, #005bff 0%, #006bff 52%, #2a7fff 100%);
   color: #fff;
@@ -2122,20 +2122,20 @@ select:focus {
 }
 
 .prompt-logo {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
   object-fit: cover;
   background: #fff;
 }
 
 .prompt-bell {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, .25);
-  border-radius: 16px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, .14);
   color: #fff;
   backdrop-filter: blur(20px);
@@ -2144,8 +2144,8 @@ select:focus {
 .prompt-bell svg,
 .prompt-icon-box svg,
 .prompt-order-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   stroke: currentColor;
   fill: none;
   stroke-width: 2;
@@ -2154,15 +2154,15 @@ select:focus {
 }
 
 .prompt-home-copy {
-  margin-top: 32px;
+  margin-top: 28px;
 }
 
 .prompt-home-copy h1 {
   margin: 0;
   color: #fff;
-  font-size: 34px;
+  font-size: 32px;
   font-weight: 700;
-  line-height: 40px;
+  line-height: 38px;
 }
 
 .prompt-home-copy p {
@@ -2170,10 +2170,11 @@ select:focus {
   color: rgba(255, 255, 255, .82);
   font-size: 15px;
   font-weight: 500;
+  line-height: 20px;
 }
 
 .prompt-home-content {
-  margin-top: -42px;
+  margin-top: -38px;
   padding: 0 24px;
 }
 
@@ -2184,20 +2185,21 @@ select:focus {
 }
 
 .prompt-kpi-card {
-  min-height: 138px;
-  padding: 18px;
+  height: 132px;
+  padding: 14px;
   border-radius: 24px;
   background: #fff;
-  box-shadow: 0 8px 30px rgba(17, 24, 39, .06);
+  border: 1px solid rgba(230, 236, 245, .72);
+  box-shadow: 0 8px 22px rgba(17, 24, 39, .045);
 }
 
 .prompt-icon-box {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 18px;
-  margin-bottom: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  margin-bottom: 14px;
 }
 
 .prompt-icon-box.blue,
@@ -2222,32 +2224,34 @@ select:focus {
 }
 
 .prompt-kpi-card p {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: #667399;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  line-height: 18px;
 }
 
 .prompt-kpi-card strong {
   color: #081233;
   font-size: 32px;
   font-weight: 700;
-  line-height: 40px;
+  line-height: 34px;
 }
 
 .prompt-recent-card {
-  margin-top: 24px;
-  padding: 20px;
+  margin-top: 20px;
+  padding: 18px;
   border-radius: 24px;
   background: #fff;
-  box-shadow: 0 8px 30px rgba(17, 24, 39, .06);
+  border: 1px solid rgba(230, 236, 245, .72);
+  box-shadow: 0 8px 22px rgba(17, 24, 39, .045);
 }
 
 .prompt-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .prompt-section-head h2 {
@@ -2255,12 +2259,12 @@ select:focus {
   color: #081233;
   font-size: 22px;
   font-weight: 700;
-  line-height: 32px;
+  line-height: 28px;
 }
 
 .prompt-section-head button {
   width: auto;
-  min-height: 28px;
+  min-height: 24px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -2276,11 +2280,11 @@ select:focus {
 
 .prompt-order-row {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) auto;
-  gap: 14px;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 12px;
   align-items: center;
-  min-height: 88px;
-  padding: 14px 0;
+  min-height: 72px;
+  padding: 10px 0;
   border-top: 1px solid #e6ecf5;
 }
 
@@ -2296,9 +2300,9 @@ select:focus {
 .prompt-order-icon {
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 18px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
 }
 
 .prompt-order-main {
@@ -2308,17 +2312,17 @@ select:focus {
 .prompt-order-main strong {
   display: block;
   color: #081233;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
-  line-height: 24px;
+  line-height: 22px;
 }
 
 .prompt-order-main p {
-  margin: 4px 0;
+  margin: 2px 0;
   color: #081233;
   font-size: 15px;
   font-weight: 500;
-  line-height: 20px;
+  line-height: 19px;
 }
 
 .prompt-order-main small {
@@ -2330,24 +2334,24 @@ select:focus {
 .prompt-order-side {
   display: grid;
   justify-items: end;
-  gap: 8px;
+  gap: 6px;
 }
 
 .prompt-order-side strong {
   color: #081233;
-  font-size: 24px;
+  font-size: 21px;
   font-weight: 700;
-  line-height: 32px;
+  line-height: 26px;
 }
 
 .prompt-status {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
-  padding: 0 12px;
+  height: 24px;
+  padding: 0 10px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -2373,32 +2377,38 @@ select:focus {
 
 .tab-bar {
   width: min(100%, 390px);
-  height: 92px;
-  padding: 8px 16px 10px;
+  height: 88px;
+  padding: 8px 16px 8px;
   border: 0;
   border-top: 1px solid #e6ecf5;
-  border-radius: 24px 24px 0 0;
+  border-radius: 22px 22px 0 0;
   background: rgba(255, 255, 255, .92);
-  box-shadow: 0 -10px 28px rgba(17, 24, 39, .08);
+  box-shadow: 0 -8px 22px rgba(17, 24, 39, .06);
   backdrop-filter: blur(20px);
 }
 
 .tab-button {
-  min-height: 74px;
+  min-height: 70px;
   color: #98a2b3;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
 }
 
+.tab-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
 .tab-button.primary-tab {
-  margin-top: -26px;
+  margin-top: -18px;
 }
 
 .tab-button.primary-tab .tab-icon {
-  width: 62px;
-  height: 62px;
+  width: 56px;
+  height: 56px;
   background: linear-gradient(135deg, #005bff 0%, #006bff 52%, #2a7fff 100%);
-  box-shadow: 0 14px 30px rgba(0, 107, 255, .34);
+  box-shadow: 0 12px 24px rgba(0, 107, 255, .28);
+  font-size: 30px;
 }
 
 @media (max-width: 360px) {
