@@ -33,6 +33,7 @@ const demoState = {
   selectedPayment: "bank",
   selectedSalesperson: "all",
   orderSalesperson: "",
+  adminSection: "employees",
   incomeReportPeriod: "month",
   incomeReportDate: "",
   incomeReportMonth: "",
@@ -46,6 +47,8 @@ const demoState = {
   draftItems: [],
   monthlyTarget: 30000000,
   salesTargets: structuredClone(salesTargets),
+  monthlySalesTargets: {},
+  planMonth: "",
   products: structuredClone(defaultProductCatalog),
   profiles: structuredClone(defaultProfiles),
   users: [
@@ -222,12 +225,9 @@ function renderUserMenu(view = "profile") {
   document.querySelectorAll("[data-menu-view]").forEach((button) => {
     button.classList.toggle("active", button.dataset.menuView === view);
     if (["employees", "products", "plans"].includes(button.dataset.menuView)) {
-      button.classList.toggle("hidden", state.currentUser.role !== "admin");
+      button.classList.add("hidden");
     }
   });
-  if (view === "employees" && state.currentUser.role === "admin") return renderEmployeesMenu();
-  if (view === "products" && state.currentUser.role === "admin") return renderProductsMenu();
-  if (view === "plans" && state.currentUser.role === "admin") return renderPlanSettings();
   renderProfileEditor(profile);
 }
 
@@ -288,9 +288,9 @@ function renderProfileEditor(profile) {
   });
 }
 
-function renderEmployeesMenu() {
-  menuTitle.textContent = "Ажилчид";
-  menuContent.innerHTML = `
+function renderEmployeesMenu(target = menuContent, rerender = () => renderUserMenu("employees"), showTitle = true) {
+  if (showTitle) menuTitle.textContent = "Ажилчид";
+  target.innerHTML = `
     ${state.currentUser.role === "admin" ? `
       <details class="add-user-panel">
         <summary>Шинэ хэрэглэгч нэмэх</summary>
@@ -339,7 +339,7 @@ function renderEmployeesMenu() {
   `;
   const addUserForm = document.querySelector("#add-user-form");
   if (addUserForm) addUserForm.addEventListener("submit", addNewUser);
-  document.querySelectorAll("[data-save-user]").forEach((button) => {
+  target.querySelectorAll("[data-save-user]").forEach((button) => {
     button.addEventListener("click", () => {
       const index = Number(button.dataset.saveUser);
       const user = state.users[index];
@@ -347,10 +347,10 @@ function renderEmployeesMenu() {
       user.username = document.querySelector(`[data-user-field="username"][data-user-index="${index}"]`).value.trim();
       user.password = document.querySelector(`[data-user-field="password"][data-user-index="${index}"]`).value;
       saveState();
-      renderUserMenu("employees");
+      rerender();
     });
   });
-  document.querySelectorAll("[data-delete-user]").forEach((button) => {
+  target.querySelectorAll("[data-delete-user]").forEach((button) => {
     button.addEventListener("click", () => {
       const index = Number(button.dataset.deleteUser);
       const user = state.users[index];
@@ -361,7 +361,7 @@ function renderEmployeesMenu() {
       delete state.salesTargets[user.name];
       saveState();
       renderApp();
-      renderUserMenu("employees");
+      rerender();
     });
   });
 }
@@ -391,12 +391,13 @@ function addNewUser(event) {
   state.salesTargets[newUser.name] = Number(document.querySelector("#new-user-sales-target").value || 0);
   saveState();
   renderApp();
-  renderUserMenu("employees");
+  if (state.activeTab === "admin") renderAdminView();
+  else renderUserMenu("employees");
 }
 
-function renderProductsMenu() {
-  menuTitle.textContent = "Бараа";
-  menuContent.innerHTML = `
+function renderProductsMenu(target = menuContent, rerender = () => renderUserMenu("products"), showTitle = true) {
+  if (showTitle) menuTitle.textContent = "Бараа";
+  target.innerHTML = `
     <form id="product-form" class="menu-form">
       <label>Барааны нэр<input id="new-product-name" required /></label>
       <label>Үнэ<input id="new-product-price" type="number" min="0" value="0" required /></label>
@@ -428,34 +429,35 @@ function renderProductsMenu() {
     if (!name) return;
     state.products.push({ name, price });
     saveState();
-    renderUserMenu("products");
+    rerender();
   });
-  document.querySelectorAll("[data-save-product]").forEach((button) => {
+  target.querySelectorAll("[data-save-product]").forEach((button) => {
     button.addEventListener("click", () => {
       const index = Number(button.dataset.saveProduct);
       if (!state.products[index]) return;
       state.products[index].name = document.querySelector(`[data-product-field="name"][data-product-index="${index}"]`).value.trim();
       state.products[index].price = Number(document.querySelector(`[data-product-field="price"][data-product-index="${index}"]`).value || 0);
       saveState();
-      renderUserMenu("products");
+      rerender();
     });
   });
-  document.querySelectorAll("[data-delete-product]").forEach((button) => {
+  target.querySelectorAll("[data-delete-product]").forEach((button) => {
     button.addEventListener("click", () => {
       const index = Number(button.dataset.deleteProduct);
       if (!state.products[index]) return;
       if (!confirm(`${state.products[index].name} барааг устгах уу?`)) return;
       state.products.splice(index, 1);
       saveState();
-      renderUserMenu("products");
+      rerender();
     });
   });
 }
 
-function renderPlanSettings() {
-  menuTitle.textContent = "Төлөвлөгөө";
-  menuContent.innerHTML = `
+function renderPlanSettings(target = menuContent, rerender = () => renderUserMenu("plans"), showTitle = true) {
+  if (showTitle) menuTitle.textContent = "Төлөвлөгөө";
+  target.innerHTML = `
     <form id="plan-form" class="menu-form">
+      <label>Сар<input id="plan-month" type="month" /></label>
       <label>
         Хэрэглэгч
         <select id="plan-person">
@@ -466,19 +468,24 @@ function renderPlanSettings() {
       <button class="primary-action" type="submit">Төлөвлөгөө хадгалах</button>
     </form>
   `;
+  const monthInput = document.querySelector("#plan-month");
   const personSelect = document.querySelector("#plan-person");
   const salesInput = document.querySelector("#plan-sales");
+  monthInput.value = state.planMonth || currentMonth();
   const syncPlanInputs = () => {
-    salesInput.value = salesTargetFor(personSelect.value);
+    salesInput.value = salesTargetFor(personSelect.value, monthInput.value);
   };
   personSelect.addEventListener("change", syncPlanInputs);
+  monthInput.addEventListener("change", syncPlanInputs);
   syncPlanInputs();
   document.querySelector("#plan-form").addEventListener("submit", (event) => {
     event.preventDefault();
-    state.salesTargets[personSelect.value] = Number(salesInput.value || 0);
+    state.planMonth = monthInput.value || currentMonth();
+    state.monthlySalesTargets[state.planMonth] = state.monthlySalesTargets[state.planMonth] || {};
+    state.monthlySalesTargets[state.planMonth][personSelect.value] = Number(salesInput.value || 0);
     saveState();
     renderApp();
-    renderUserMenu("plans");
+    rerender();
   });
 }
 
@@ -490,6 +497,8 @@ function loadState() {
   initialState.draftCustomer = initialState.draftCustomer || "";
   initialState.monthlyTarget = Number(initialState.monthlyTarget || demoState.monthlyTarget);
   initialState.salesTargets = { ...salesTargets, ...(initialState.salesTargets || {}) };
+  initialState.monthlySalesTargets = initialState.monthlySalesTargets || {};
+  initialState.planMonth = initialState.planMonth || currentMonth();
   initialState.products = Array.isArray(initialState.products) ? initialState.products : structuredClone(defaultProductCatalog);
   initialState.profiles = { ...structuredClone(defaultProfiles), ...(initialState.profiles || {}) };
   initialState.users = [...(demoState.users || []), ...(initialState.users || [])].filter(
@@ -528,6 +537,8 @@ function prepareRuntimeState(target) {
     .filter((user) => user.role !== "staff");
   target.profiles = { ...structuredClone(defaultProfiles), ...(target.profiles || {}) };
   target.salesTargets = { ...salesTargets, ...(target.salesTargets || {}) };
+  target.monthlySalesTargets = target.monthlySalesTargets || {};
+  target.planMonth = target.planMonth || currentMonth();
   target.orders = (target.orders || []).map(normalizeOrder);
   if (target.currentUser?.role === "staff") target.currentUser = null;
   if (target.currentUser && !tabMap[target.currentUser.role]?.some((tab) => tab.id === target.activeTab)) {
@@ -626,8 +637,8 @@ function ensureProfile(name = state.currentUser?.name) {
   return state.profiles[name];
 }
 
-function salesTargetFor(name) {
-  return Number(state.salesTargets?.[name] || 8000000);
+function salesTargetFor(name, month = currentMonth()) {
+  return Number(state.monthlySalesTargets?.[month]?.[name] ?? state.salesTargets?.[name] ?? 8000000);
 }
 
 function renderPersonSelect(targetId, value, onChange) {
@@ -897,6 +908,7 @@ function renderView() {
 }
 
 function renderAdminView() {
+  state.adminSection = state.adminSection || "employees";
   view.innerHTML = `
     <section class="dashboard-card admin-home">
       <div class="section-heading">
@@ -911,17 +923,38 @@ function renderAdminView() {
         <article class="summary-card"><span>Борлуулагч</span><strong>${salespersonNames().length}</strong></article>
         <article class="summary-card"><span>Захиалга</span><strong>${state.orders.length}</strong></article>
       </div>
-      <div class="admin-action-grid">
-        <button class="secondary-action" type="button" data-admin-open="employees">Ажилчид</button>
-        <button class="secondary-action" type="button" data-admin-open="products">Бараа</button>
-        <button class="secondary-action" type="button" data-admin-open="plans">Төлөвлөгөө</button>
-        <button class="secondary-action" type="button" data-admin-open="profile">Профайл</button>
+      <div class="admin-action-grid admin-tabs">
+        <button class="secondary-action ${state.adminSection === "employees" ? "active-admin-tab" : ""}" type="button" data-admin-section="employees">Ажилчид</button>
+        <button class="secondary-action ${state.adminSection === "products" ? "active-admin-tab" : ""}" type="button" data-admin-section="products">Бараа</button>
+        <button class="secondary-action ${state.adminSection === "plans" ? "active-admin-tab" : ""}" type="button" data-admin-section="plans">Төлөвлөгөө</button>
+        <button class="secondary-action" type="button" data-admin-profile>Профайл</button>
       </div>
     </section>
+    <section class="tool-panel admin-workspace">
+      <div class="section-heading">
+        <h3>${state.adminSection === "employees" ? "Ажилчид" : state.adminSection === "products" ? "Бараа" : "Төлөвлөгөө"}</h3>
+        <span>Admin</span>
+      </div>
+      <div id="admin-section-content"></div>
+    </section>
   `;
-  document.querySelectorAll("[data-admin-open]").forEach((button) => {
-    button.addEventListener("click", () => openUserMenu(button.dataset.adminOpen));
+  document.querySelectorAll("[data-admin-section]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.adminSection = button.dataset.adminSection;
+      saveState();
+      renderAdminView();
+    });
   });
+  document.querySelector("[data-admin-profile]").addEventListener("click", () => openUserMenu("profile"));
+  renderAdminSection();
+}
+
+function renderAdminSection() {
+  const target = document.querySelector("#admin-section-content");
+  const rerender = () => renderAdminView();
+  if (state.adminSection === "products") return renderProductsMenu(target, rerender, false);
+  if (state.adminSection === "plans") return renderPlanSettings(target, rerender, false);
+  return renderEmployeesMenu(target, rerender, false);
 }
 
 function renderSalesView() {

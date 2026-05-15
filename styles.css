@@ -482,6 +482,16 @@ select:focus {
   margin-top: 14px;
 }
 
+.admin-tabs .active-admin-tab {
+  background: linear-gradient(135deg, #006dff, #004dff);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(0, 83, 255, 0.22);
+}
+
+.admin-workspace {
+  margin-top: 14px;
+}
+
 .mini-action {
   width: 32px;
   height: 32px;
