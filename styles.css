@@ -99,7 +99,7 @@ button:disabled {
 }
 
 .login-step {
-  padding-top: 64px;
+  padding-top: 36px;
 }
 
 .brand-lockup,
@@ -285,20 +285,6 @@ h1 {
   color: rgba(255, 255, 255, 0.88);
   font-size: 14px;
   line-height: 1.5;
-}
-
-.back-button {
-  position: absolute;
-  left: 0;
-  top: 18px;
-  width: 42px;
-  height: 42px;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: #fff;
-  cursor: pointer;
-  font-size: 26px;
 }
 
 h2 {

@@ -78,7 +78,6 @@ const roleStep = document.querySelector("#role-step");
 const loginStep = document.querySelector("#login-step");
 const roleSelect = document.querySelector("#role-select");
 const username = document.querySelector("#username");
-const backToRoles = document.querySelector("#back-to-roles");
 const changeRole = document.querySelector("#change-role");
 const selectedRoleIcon = document.querySelector("#selected-role-icon");
 const selectedRoleName = document.querySelector("#selected-role-name");
@@ -147,7 +146,6 @@ document.querySelectorAll("[data-login-role]").forEach((button) => {
   });
 });
 
-backToRoles.addEventListener("click", showRoleStep);
 changeRole.addEventListener("click", showRoleStep);
 roleSelect.addEventListener("change", updateSelectedRole);
 
