@@ -1196,8 +1196,9 @@ function renderAccountingView() {
   document.querySelector("#accounting-list").innerHTML = "";
 }
 
-(async () => {
-  const { data } = await sb.from("app_state").select("data").eq("id", 1).single();
+js(async () => {
+  const { data } = await sb.from("app_state").select("data").eq("id", 1).maybeSingle();
   if (data?.data) Object.assign(state, data.data);
   renderApp();
 })();
+
