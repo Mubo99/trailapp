@@ -1088,7 +1088,8 @@ ${order.salesperson === state.currentUser.name || state.currentUser.role === "ac
       order.status = select.value;
       saveState();
       renderView();
-    });document.querySelectorAll(".delete-order-btn").forEach((button) => {
+    });
+    document.querySelectorAll(".delete-order-btn").forEach((button) => {
     button.addEventListener("click", () => {
       if (!confirm("Захиалгыг устгах уу?")) return;
       state.orders = state.orders.filter(
