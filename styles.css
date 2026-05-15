@@ -393,6 +393,7 @@ select {
   border-radius: 8px;
   background: #fbfdff;
   color: var(--ink);
+  font-size: 16px;
   padding: 0 12px;
   outline: none;
 }
