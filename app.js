@@ -1146,17 +1146,25 @@ function iconSvg(name) {
 
 function renderMoreView() {
   const adminQuick = state.currentUser.role === "admin" ? `
-    <section class="mobile-panel">
+    <section class="mobile-panel overlap-panel more-quick-panel">
       <h3>Түргэн хандалт</h3>
-      <div class="quick-grid">
+      <div class="quick-grid six-grid">
         <button type="button" data-admin-section="employees"><span>${iconSvg("users")}</span>Ажилчид</button>
         <button type="button" data-admin-section="products"><span>${iconSvg("box")}</span>Бараа</button>
         <button type="button" data-admin-section="plans"><span>${iconSvg("chart")}</span>Төлөвлөгөө</button>
+        <button type="button" data-menu-profile><span>${iconSvg("user")}</span>Профайл</button>
+        <button type="button" data-goto-orders><span>${iconSvg("calendar")}</span>Захиалга</button>
+        <button type="button" data-goto-report><span>${iconSvg("file")}</span>Тайлан</button>
+      </div>
+      <div class="more-summary-grid">
+        <article><span>${iconSvg("box")}</span><strong>${state.products.length}</strong><p>Бараа</p></article>
+        <article><span>${iconSvg("users")}</span><strong>${state.users.length}</strong><p>Хэрэглэгч</p></article>
+        <article><span>${iconSvg("building")}</span><strong>${state.orders.length}</strong><p>Захиалга</p></article>
       </div>
     </section>
     <section class="mobile-panel admin-workspace"><div id="admin-section-content"></div></section>
   ` : `
-    <section class="mobile-panel"><h3>Миний цэс</h3><div class="quick-grid"><button type="button" data-menu-profile><span>${iconSvg("user")}</span>Профайл</button><button type="button" data-menu-employees><span>${iconSvg("phone")}</span>Ажилчид</button></div></section>
+    <section class="mobile-panel overlap-panel more-quick-panel"><h3>Миний цэс</h3><div class="quick-grid"><button type="button" data-menu-profile><span>${iconSvg("user")}</span>Профайл</button><button type="button" data-menu-employees><span>${iconSvg("phone")}</span>Ажилчид</button></div></section>
     <section class="mobile-panel"><h3>Ажилчид</h3><div id="more-contact-directory"></div></section>
   `;
   view.innerHTML = `
@@ -1166,6 +1174,8 @@ function renderMoreView() {
   document.querySelector("[data-open-menu]")?.addEventListener("click", () => openUserMenu("profile"));
   document.querySelector("[data-menu-profile]")?.addEventListener("click", () => openUserMenu("profile"));
   document.querySelector("[data-menu-employees]")?.addEventListener("click", () => openUserMenu("employees"));
+  document.querySelector("[data-goto-orders]")?.addEventListener("click", () => { state.activeTab = "orders"; saveState(); renderApp(); });
+  document.querySelector("[data-goto-report]")?.addEventListener("click", () => { state.activeTab = "accounting"; saveState(); renderApp(); });
   if (state.currentUser.role === "admin") {
     state.adminSection = state.adminSection || "employees";
     document.querySelectorAll("[data-admin-section]").forEach((button) => {
@@ -1372,15 +1382,22 @@ function renderDraftItems() {
   const total = draftTotal();
   target.innerHTML = state.draftItems.length
     ? `
+      <div class="order-table-head"><span>Бараа</span><span>Тоо</span><span>Нэгж үнэ</span><span>Нийт</span><span></span></div>
       <div class="order-lines">
         ${state.draftItems
           .map(
             (item, index) => `
               <div class="order-line">
-                <div>
+                <div class="order-product-cell">
+                  <span class="line-product-icon">${iconSvg("box")}</span>
+                  <div>
                   <strong>${item.product}</strong>
-                  <span>${item.quantity}ш · ${money(item.price)} · ${money(item.quantity * item.price)}</span>
+                    <span>SKU: BAT-${String(index + 1).padStart(3, "0")}</span>
+                  </div>
                 </div>
+                <span class="line-qty">${item.quantity}</span>
+                <span>${money(item.price)}</span>
+                <strong>${money(item.quantity * item.price)}</strong>
                 <button class="mini-action" type="button" data-remove-item="${index}" aria-label="Хасах">×</button>
               </div>
             `,
@@ -1578,61 +1595,157 @@ function renderProductReportPanel() {
 }
 
 function renderAccountingView() {
-  view.innerHTML = renderScreenHero("Тайлан", "Тайлангаа шүүж, татаж авах боломжтой.", `<button class="hero-action" type="button" data-download-hero>Тайлан татах</button>`) + document.querySelector("#accounting-view").innerHTML;
   const reportOrders = incomeReportOrders();
   const income = incomeMetrics(reportOrders);
   const periodText = reportLabel(state.incomeReportPeriod, state.incomeReportDate, state.incomeReportMonth);
-  document.querySelector("#accounting-stats").innerHTML = [
-    ["Нийт орлого", money(income.totalIncome)],
-    ["Хүлээгдэж буй", money(income.expectedIncome)],
-    ["Захиалга", income.orders.length],
-    ["Төлөгдсөн захиалга", income.paidOrders],
-  ]
-    .map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`)
-    .join("");
-
-  renderReportFilters();
+  const productRows = topProducts(productReportOrders());
+  const productQuantity = productRows.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const productAmount = productRows.reduce((sum, item) => sum + Number(item.total || 0), 0);
+  view.innerHTML = `
+    ${renderScreenHero("Тайлан", "Тайлангаа шүүж, татаж авах боломжтой.", `<button class="hero-action report-hero-button" type="button" data-download-hero>${iconSvg("file")} Тайлан татах</button>`)}
+    <section class="mobile-panel overlap-panel report-filter-panel">
+      <div class="report-filter-grid mock-filter-grid">
+        <label>
+          Огноо
+          <div class="input-shell">${iconSvg("calendar")}
+            <select id="income-report-period">
+              <option value="month" ${state.incomeReportPeriod === "month" ? "selected" : ""}>Сараар</option>
+              <option value="day" ${state.incomeReportPeriod === "day" ? "selected" : ""}>Өдрөөр</option>
+            </select>
+          </div>
+        </label>
+        <label class="${state.incomeReportPeriod === "day" ? "" : "hidden"}">
+          Өдөр
+          <div class="input-shell">${iconSvg("calendar")}<input id="income-report-date" type="date" value="${state.incomeReportDate || today()}" /></div>
+        </label>
+        <label class="${state.incomeReportPeriod === "month" ? "" : "hidden"}">
+          Сар
+          <div class="input-shell">${iconSvg("calendar")}<input id="income-report-month" type="month" value="${state.incomeReportMonth || currentMonth()}" /></div>
+        </label>
+        <label>
+          Борлуулагч
+          <div class="input-shell">${iconSvg("user")}
+            <select id="income-report-person">
+              <option value="all" ${state.incomeReportSalesperson === "all" ? "selected" : ""}>Бүгд</option>
+              ${salespersonNames().map((name) => `<option value="${name}" ${state.incomeReportSalesperson === name ? "selected" : ""}>${name}</option>`).join("")}
+            </select>
+          </div>
+        </label>
+      </div>
+      <div class="report-note"><span>${iconSvg("pulse")}</span>Огноо болон борлуулагч сонгосны дараа тайлан татах файлын мэдээлэл таны сонголтоор харагдана.</div>
+    </section>
+    <section class="mobile-panel selected-report-panel">
+      <div class="selected-report-top">
+        <div>
+          <h3>Сонгосон тайлан</h3>
+          <p><b>Огноо:</b> ${periodText}</p>
+          <p><b>Борлуулагч:</b> ${state.incomeReportSalesperson === "all" ? "Бүгд" : state.incomeReportSalesperson}</p>
+        </div>
+        <span class="report-illustration">${iconSvg("file")}</span>
+      </div>
+      <div class="download-section">
+        <h3>Тайлан татах</h3>
+        <div class="download-grid">
+          <button id="download-income-report" type="button" class="download-card excel"><span>X</span><strong>Excel файл</strong><small>.csv</small></button>
+          <button id="download-product-report" type="button" class="download-card pdf"><span>PDF</span><strong>Барааны тайлан</strong><small>.csv</small></button>
+        </div>
+      </div>
+      <div class="report-note compact"><span>↓</span>Тайлан таны сонгосон огноо, борлуулагчийн дагуу үүснэ.</div>
+    </section>
+    <section class="mobile-panel report-summary-panel">
+      <h3>Товч мэдээлэл</h3>
+      <div class="report-summary-grid">
+        <article><span class="blue">${iconSvg("wallet")}</span><p>Нийт орлого</p><strong>${money(income.totalIncome)}</strong></article>
+        <article><span class="green">${iconSvg("box")}</span><p>Нийт захиалга</p><strong>${income.orders.length}</strong></article>
+        <article><span class="orange">${iconSvg("pulse")}</span><p>Хүлээгдэж буй дүн</p><strong>${money(income.unpaidIncome)}</strong></article>
+        <article><span class="purple">${iconSvg("checkedFile")}</span><p>Төлөгдсөн дүн</p><strong>${money(income.totalIncome)}</strong></article>
+      </div>
+    </section>
+    <section class="mobile-panel product-report-card">
+      <div class="section-heading"><h3>Их зарагдсан бараа</h3><span>${reportLabel(state.productReportPeriod, state.productReportDate, state.productReportMonth)}</span></div>
+      <div class="report-filter-grid mock-filter-grid product-mini-filter">
+        <label>
+          Хугацаа
+          <div class="input-shell">${iconSvg("calendar")}
+            <select id="product-report-period">
+              <option value="month" ${state.productReportPeriod === "month" ? "selected" : ""}>Сараар</option>
+              <option value="day" ${state.productReportPeriod === "day" ? "selected" : ""}>Өдрөөр</option>
+            </select>
+          </div>
+        </label>
+        <label class="${state.productReportPeriod === "day" ? "" : "hidden"}">
+          Өдөр
+          <div class="input-shell">${iconSvg("calendar")}<input id="product-report-date" type="date" value="${state.productReportDate || today()}" /></div>
+        </label>
+        <label class="${state.productReportPeriod === "month" ? "" : "hidden"}">
+          Сар
+          <div class="input-shell">${iconSvg("calendar")}<input id="product-report-month" type="month" value="${state.productReportMonth || currentMonth()}" /></div>
+        </label>
+      </div>
+      <div class="rank-list">
+        ${productRows.map((item, index) => `
+          <article class="rank-item report-rank-item">
+            <strong>${index + 1}</strong>
+            <div><h4>${item.product}</h4><span>${item.quantity}ш · ${money(item.total)}</span></div>
+          </article>
+        `).join("") || `<p class="empty-note">Энэ хугацаанд барааны борлуулалт алга.</p>`}
+      </div>
+      <div class="summary-grid in-panel">
+        <article class="summary-card"><span>Нийт ширхэг</span><strong>${productQuantity}ш</strong></article>
+        <article class="summary-card"><span>Нийт дүн</span><strong>${money(productAmount)}</strong></article>
+      </div>
+    </section>
+    <section class="mobile-panel sales-index-card">
+      <div class="section-heading"><h3>Борлуулагчийн index</h3><span>${currentMonth()}</span></div>
+      <div class="index-list">
+        ${salesPeopleIndex().map((person) => `
+          <article class="index-item">
+            <div class="index-head"><strong>${person.name}</strong><span>${person.percent}%</span></div>
+            <p>${money(person.total)} / ${money(person.target)}</p>
+            <div class="progress-bar"><i style="width:${person.percent}%"></i></div>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+  `;
+  document.querySelector("#income-report-period").addEventListener("change", (event) => {
+    state.incomeReportPeriod = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
+  document.querySelector("#income-report-date")?.addEventListener("change", (event) => {
+    state.incomeReportDate = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
+  document.querySelector("#income-report-month")?.addEventListener("change", (event) => {
+    state.incomeReportMonth = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
+  document.querySelector("#income-report-person").addEventListener("change", (event) => {
+    state.incomeReportSalesperson = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
+  document.querySelector("#product-report-period").addEventListener("change", (event) => {
+    state.productReportPeriod = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
+  document.querySelector("#product-report-date")?.addEventListener("change", (event) => {
+    state.productReportDate = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
+  document.querySelector("#product-report-month")?.addEventListener("change", (event) => {
+    state.productReportMonth = event.target.value;
+    saveState();
+    renderAccountingView();
+  });
   document.querySelector("#download-income-report").addEventListener("click", downloadIncomeReport);
+  document.querySelector("#download-product-report").addEventListener("click", downloadProductReport);
   document.querySelector("[data-download-hero]")?.addEventListener("click", downloadIncomeReport);
-
-  document.querySelector("#income-panel").innerHTML = `
-    <div class="section-heading">
-      <h3>Орлогын index</h3>
-      <span>${periodText}</span>
-    </div>
-    <div class="summary-grid in-panel">
-      <article class="summary-card"><span>Дансаар</span><strong>${money(reportOrders.filter((order) => order.payment === "bank").reduce((sum, order) => sum + Number(order.paid || 0), 0))}</strong></article>
-      <article class="summary-card"><span>Бэлнээр</span><strong>${money(reportOrders.filter((order) => order.payment === "cash").reduce((sum, order) => sum + Number(order.paid || 0), 0))}</strong></article>
-      <article class="summary-card"><span>Төлөгдөөгүй үлдэгдэл</span><strong>${money(income.unpaidIncome)}</strong></article>
-      <article class="summary-card"><span>Орлогын биелэлт</span><strong>${income.expectedIncome ? Math.round((income.totalIncome / income.expectedIncome) * 100) : 0}%</strong></article>
-    </div>
-  `;
-
-  renderProductReportPanel();
-
-  document.querySelector("#sales-index-panel").innerHTML = `
-    <div class="section-heading">
-      <h3>Борлуулагчийн index</h3>
-      <span>${currentMonth()}</span>
-    </div>
-    <div class="index-list">
-      ${salesPeopleIndex()
-        .map(
-          (person) => `
-            <article class="index-item">
-              <div class="index-head">
-                <strong>${person.name}</strong>
-                <span>${person.percent}%</span>
-              </div>
-              <p>${money(person.total)} / ${money(person.target)}</p>
-              <div class="progress-bar"><i style="width:${person.percent}%"></i></div>
-            </article>
-          `,
-        )
-        .join("")}
-    </div>
-  `;
-  document.querySelector("#accounting-list").innerHTML = "";
 }
 
 (async () => {
