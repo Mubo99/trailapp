@@ -2,7 +2,9 @@ const { createClient } = supabase;
 const sb = createClient(
   "https://cehuslgiaehogmqybvjp.supabase.co",
   "sb_publishable_BHQuFWv05h0CpZ_gFRz7xA_u8-kwHsD"
-);const regions = ["Төв оффис", "Улаанбаатар салбар", "Дархан салбар", "Эрдэнэт салбар", "Агуулах"];
+);
+
+const regions = ["Төв оффис", "Улаанбаатар салбар", "Дархан салбар", "Эрдэнэт салбар", "Агуулах"];
 
 const productCatalog = [
   { name: "Цай 500гр", price: 25000 },
@@ -1073,7 +1075,7 @@ function renderOrderList(target, orders) {
             </select>
           </div>
           <p>Борлуулагч: ${order.salesperson} · ${order.createdAt}</p>
-${order.salesperson === state.currentUser.name || state.currentUser.role === "accountant" 
+${state.currentUser.role === "accountant" 
   ? `<button class="delete-order-btn" data-order-id="${order.id}">🗑 Устгах</button>` 
   : ""}
 </article>    
@@ -1092,7 +1094,8 @@ document.querySelectorAll("[data-order-status]").forEach((select) => {
   });
   document.querySelectorAll(".delete-order-btn").forEach((button) => {
     button.addEventListener("click", () => {
-      if (!confirm("Захиалгыг устгах уу?")) return;
+      if (state.currentUser.role !== "accountant") return;
+      if (!confirm("Зөвхөн нягтлан захиалга устгана. Энэ захиалгыг бүр мөсөн устгах уу?")) return;
       state.orders = state.orders.filter(
         (order) => String(order.id) !== button.dataset.orderId
       );
