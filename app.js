@@ -1020,34 +1020,62 @@ function ordersForCurrentRole() {
 }
 
 function renderHomeView() {
-  const scoped = ordersForCurrentRole();
-  const todayOrders = scoped.filter((order) => order.createdAt?.startsWith(today()));
-  const income = incomeMetrics(scoped.filter((order) => order.createdAt?.startsWith(currentMonth())));
-  const pending = scoped.reduce((sum, order) => sum + Math.max(0, orderTotal(order) - Number(order.paid || 0)), 0);
   view.innerHTML = `
-    <section class="screen-hero home-hero">
-      <div class="status-row"><span>9:41</span><span class="system-icons"><i></i><i></i><i></i>${iconSvg("pulse")}</span></div>
-      <div class="home-hero-row">
-        <img src="./assets/batmon-icon.png" alt="Batmon" class="hero-logo" />
-        <div class="home-greeting">
-          <p>Сайн байна уу,</p>
-          <h2>${state.currentUser.name} 👋</h2>
+    <section class="prompt-home">
+      <header class="prompt-home-hero">
+        <div class="prompt-home-top">
+          <img src="./assets/batmon-icon.png" alt="Batmon" class="prompt-logo" />
+          <button class="prompt-bell" type="button" data-open-menu aria-label="Мэдэгдэл">${iconSvg("bell")}</button>
         </div>
-        <button class="hero-icon notification-button" type="button" data-open-menu>${iconSvg("bell")}<b>3</b></button>
+        <div class="prompt-home-copy">
+          <h1>Сайн байна уу</h1>
+          <p>Өнөөдрийн борлуулалтын тойм</p>
+        </div>
+      </header>
+
+      <div class="prompt-home-content">
+        <section class="prompt-kpi-grid" aria-label="Товч үзүүлэлт">
+          ${[
+            ["wallet", "Нийт орлого", "263,000₮", "blue"],
+            ["file", "Захиалга", "12", "orange"],
+            ["checkedFile", "Төлөгдсөн", "180,000₮", "green"],
+            ["pulse", "Үлдэгдэл", "83,000₮", "purple"],
+          ].map(([icon, label, value, tone]) => `
+            <article class="prompt-kpi-card">
+              <span class="prompt-icon-box ${tone}">${iconSvg(icon)}</span>
+              <p>${label}</p>
+              <strong>${value}</strong>
+            </article>
+          `).join("")}
+        </section>
+
+        <section class="prompt-recent-card">
+          <div class="prompt-section-head">
+            <h2>Сүүлийн захиалга</h2>
+            <button type="button" data-goto-orders>Бүгд</button>
+          </div>
+          <div class="prompt-order-list">
+            ${[
+              ["#1024", "Миний дэлгүүр", "Өнөөдөр", "125,000₮", "Шинэ", "new"],
+              ["#1023", "OD Paper", "Өчигдөр", "89,000₮", "Баталгаажсан", "confirmed"],
+              ["#1022", "Office Plus", "05/15", "49,000₮", "Хүргэгдсэн", "delivered"],
+            ].map(([number, company, date, price, status, tone]) => `
+              <article class="prompt-order-row">
+                <span class="prompt-order-icon">${iconSvg("file")}</span>
+                <div class="prompt-order-main">
+                  <strong>${number}</strong>
+                  <p>${company}</p>
+                  <small>${date}</small>
+                </div>
+                <div class="prompt-order-side">
+                  <strong>${price}</strong>
+                  <span class="prompt-status ${tone}">${status}</span>
+                </div>
+              </article>
+            `).join("")}
+          </div>
+        </section>
       </div>
-      <p class="hero-kicker">Өнөөдрийн борлуулалтын тойм</p>
-    </section>
-    <section class="mobile-panel overlap-panel stat-panel">
-      <div class="mobile-stat-grid">
-        <article class="mobile-stat blue"><span>${iconSvg("wallet")}</span><p>Нийт орлого</p><strong>${money(income.totalIncome)}</strong><small>↑ 12% өмнөх сараас</small></article>
-        <article class="mobile-stat green"><span>${iconSvg("pulse")}</span><p>Хүлээгдэж буй</p><strong>${money(pending)}</strong><small>↑ 8% өмнөх сараас</small></article>
-        <article class="mobile-stat purple"><span>${iconSvg("file")}</span><p>Захиалгын тоо</p><strong>${todayOrders.length}</strong><small>↑ 1 өмнөх сараас</small></article>
-        <article class="mobile-stat orange"><span>${iconSvg("checkedFile")}</span><p>Төлөгдсөн захиалга</p><strong>${todayOrders.filter((order) => order.status === "paid").length}</strong><small>↑ 1 өмнөх сараас</small></article>
-      </div>
-    </section>
-    <section class="mobile-panel latest-panel">
-      <div class="section-heading"><h3>Сүүлийн захиалга</h3><button class="link-action" type="button" data-goto-orders>Бүгдийг харах →</button></div>
-      <div class="mobile-order-list">${renderOrderCards(scoped.slice(0, 4), false)}</div>
     </section>
   `;
   document.querySelector("[data-open-menu]")?.addEventListener("click", () => openUserMenu("profile"));
