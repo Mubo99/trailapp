@@ -1,4 +1,8 @@
-const regions = ["Төв оффис", "Улаанбаатар салбар", "Дархан салбар", "Эрдэнэт салбар", "Агуулах"];
+const { createClient } = supabase;
+const sb = createClient(
+  "https://cehuslgiaehogmqybvjp.supabase.co",
+  "sb_publishable_BHQuFWv05h0CpZ_gFRz7xA_u8-kwHsD"
+);const regions = ["Төв оффис", "Улаанбаатар салбар", "Дархан салбар", "Эрдэнэт салбар", "Агуулах"];
 
 const productCatalog = [
   { name: "Цай 500гр", price: 25000 },
@@ -466,9 +470,11 @@ function normalizeTimeEntry(entry) {
   };
 }
 
-function saveState() {
+async function saveState() {
   localStorage.setItem("salesops-state", JSON.stringify(state));
+  await sb.from("app_state").upsert({ id: 1, data: state });
 }
+
 
 function money(value) {
   return new Intl.NumberFormat("mn-MN").format(Math.round(value || 0)) + "₮";
@@ -1190,4 +1196,8 @@ function renderAccountingView() {
   document.querySelector("#accounting-list").innerHTML = "";
 }
 
-renderApp();
+(async () => {
+  const { data } = await sb.from("app_state").select("data").eq("id", 1).single();
+  if (data?.data) Object.assign(state, data.data);
+  renderApp();
+})();
