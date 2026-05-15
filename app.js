@@ -1073,7 +1073,10 @@ function renderOrderList(target, orders) {
             </select>
           </div>
           <p>Борлуулагч: ${order.salesperson} · ${order.createdAt}</p>
-        </article>
+${order.salesperson === state.currentUser.name || state.currentUser.role === "accountant" 
+  ? `<button class="delete-order-btn" data-order-id="${order.id}">🗑 Устгах</button>` 
+  : ""}
+</article>    
       `;
     })
     .join("");
@@ -1085,7 +1088,15 @@ function renderOrderList(target, orders) {
       order.status = select.value;
       saveState();
       renderView();
-    });
+    });document.querySelectorAll(".delete-order-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!confirm("Захиалгыг устгах уу?")) return;
+      state.orders = state.orders.filter(
+        (order) => String(order.id) !== button.dataset.orderId
+      );
+      saveState();
+      renderView();
+
   });
 }
 
