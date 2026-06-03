@@ -1,210 +1,289 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="mn">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Batmon Sales</title>
-    <link rel="stylesheet" href="./styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
-  <body>
-    <main class="app-shell">
-      <section id="login-screen" class="login-screen">
-        <div id="role-step" class="role-step">
-          <div class="brand-lockup login-brand">
-            <img src="./assets/batmon-icon.png" alt="Batmon" class="brand-mark large" />
-            <div>
-              <h1>BATMON</h1>
-              <p class="brand-subtitle">Боломжийг холбож байна</p>
-            </div>
-          </div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Захиалгын систем</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.30.0/tabler-icons.min.css">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#dde3f0;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif}
+    #root{max-width:430px;margin:0 auto;min-height:100vh;box-shadow:0 0 40px rgba(0,0,0,.12)}
+    button{font-family:inherit;-webkit-tap-highlight-color:transparent}
+    input,textarea,select{font-family:inherit;font-size:16px}
+    ::-webkit-scrollbar{display:none}
+    .input-sm{width:100%;border:0.5px solid #e2e5eb;border-radius:8px;padding:8px 10px;font-size:14px;outline:none;font-family:inherit;background:#fff;color:#111827;box-sizing:border-box}
+    .input-sm:focus{border-color:#2352DC}
+    @media print{.no-print{display:none!important}.print-only{display:block!important}}
+    .print-only{display:none}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const{useState,useMemo}=React;
+const B='#2352DC',BG='#f2f4f8',W='#fff',BD='#e2e5eb',TX='#111827',MU='#6b7280';
+const ST={new:{l:'Шинэ',bg:'#dbeafe',tc:'#1d4ed8',ic:'ti-file-text'},preparing:{l:'Бэлтгэгдэж байна',bg:'#fef3c7',tc:'#b45309',ic:'ti-package'},delivered:{l:'Хүргэгдсэн',bg:'#dcfce7',tc:'#15803d',ic:'ti-truck'},cancelled:{l:'Цуцлагдсан',bg:'#fee2e2',tc:'#991b1b',ic:'ti-x'}};
+const PS={paid:{l:'Төлөгдсөн',bg:'#dcfce7',tc:'#15803d'},partial:{l:'Үлдэгдэлтэй',bg:'#ffedd5',tc:'#c2410c'},pending:{l:'Хүлээгдэж буй',bg:'#fef3c7',tc:'#b45309'}};
+const CATS=['Цаас','Бичгийн хэрэг','Оффисын хэрэгсэл'];
+const INIT_PRODS=[{id:1,sku:'PAP-001',name:'А4 цаас 80гр',price:5000,cat:'Цаас'},{id:2,sku:'PEN-002',name:'Үзгэн бал (цэнхэр)',price:1200,cat:'Бичгийн хэрэг'},{id:3,sku:'MCK-003',name:'Самбар маркер',price:3000,cat:'Бичгийн хэрэг'},{id:4,sku:'PAP-004',name:'A3 цаас',price:8000,cat:'Цаас'},{id:5,sku:'FLD-005',name:'Хавтас А4',price:800,cat:'Бичгийн хэрэг'},{id:6,sku:'STA-006',name:'Дарагч',price:2500,cat:'Оффисын хэрэгсэл'},{id:7,sku:'ENV-007',name:'Дугтуй A5',price:600,cat:'Цаас'},{id:8,sku:'INK-008',name:'Принтер бэх',price:15000,cat:'Оффисын хэрэгсэл'}];
+const INIT_CUSTS=[{id:1,name:'Таван богд ХХК',reg:'1234567',ph:'9911 2233',addr:'УБ, СБД, 5-р хороо, энхтайвны өргөн чөлөө 23'},{id:2,name:'Буман наст ХХК',reg:'2345678',ph:'9922 3344',addr:'УБ, БЗД, 3-р хороо, Нарны зам 15'},{id:3,name:'Мөнх-Импекс ХХК',reg:'3456789',ph:'9933 4455',addr:'УБ, ЧД, 1-р хороо, Бага тойруу 12'},{id:4,name:'Очир трейд ХХК',reg:'4567890',ph:'9944 5566',addr:'УБ, ХУД, 7-р хороо, Дэнжийн мянга 8'},{id:5,name:'Хос эрдэнэ ХХК',reg:'5678901',ph:'9955 6677',addr:'УБ, СХД, 2-р хороо, Олимпийн гудамж 4'},{id:6,name:'Алтай трейд ХХК',reg:'6789012',ph:'9966 7788',addr:'УБ, БЗД, 8-р хороо, Хаан Уул 22'}];
+const INIT_USERS=[{id:1,name:'Нягтлан Бат',email:'bat@example.com',role:'accountant'},{id:2,name:'Борлуулагч Сарнай',email:'sarnai@example.com',role:'salesperson',sp:'Сарнай'},{id:3,name:'Админ',email:'admin@example.com',role:'admin'}];
+const roleLabel=r=>r==='salesperson'?'Борлуулагч':r==='accountant'?'Нягтлан':'Админ';
+const canManageSettings=u=>u&&['accountant','admin'].includes(u.role);
+const canSeeAllSales=u=>u&&['accountant','admin'].includes(u.role);
+const userSalesperson=u=>u?.role==='salesperson'?(u.sp||u.name.replace('Борлуулагч ','')).trim():null;
+const mkD=(...ps)=>ps.map(([id,q])=>{const p=INIT_PRODS.find(x=>x.id===id)||{};return{pid:id,q,up:p.price||0,name:p.name||'',sku:p.sku||''}});
+const INIT_ORDERS=[
+  {id:'Z-250522-001',cid:1,status:'new',d:'2026.05.22',t:'11:30',sp:'Бат',items:mkD([1,10],[2,20],[3,5]),pm:'cash',ps:'pending',paid:0,notes:'Түргэн хүргэлттэй, 16:00 цагаас өмнө.'},
+  {id:'Z-250521-018',cid:2,status:'preparing',d:'2026.05.21',t:'16:20',sp:'Бат',items:mkD([1,5],[2,10],[4,2],[5,8],[6,3]),pm:'transfer',ps:'pending',paid:0,notes:''},
+  {id:'Z-250521-017',cid:3,status:'preparing',d:'2026.05.21',t:'14:10',sp:'Бат',items:mkD([3,10],[5,20],[1,5],[8,1]),pm:'cash',ps:'pending',paid:0,notes:''},
+  {id:'Z-250520-009',cid:4,status:'delivered',d:'2026.05.20',t:'10:45',sp:'Бат',items:mkD([1,20],[2,30],[3,8],[5,15],[7,50],[8,2]),pm:'transfer',ps:'paid',notes:''},
+  {id:'Z-250519-005',cid:5,status:'new',d:'2026.05.19',t:'09:15',sp:'Сарнай',items:mkD([2,10],[6,5]),pm:'cash',ps:'pending',paid:0,notes:''},
+  {id:'Z-250518-003',cid:6,status:'preparing',d:'2026.05.18',t:'17:30',sp:'Бат',items:mkD([1,15],[3,5],[4,3]),pm:'cash',ps:'paid',notes:''},
+  {id:'Z-250517-001',cid:1,status:'delivered',d:'2026.05.17',t:'11:05',sp:'Сарнай',items:mkD([1,50],[2,40],[3,15],[5,25],[7,100],[8,3],[6,8]),pm:'transfer',ps:'paid',notes:''},
+  {id:'Z-250516-002',cid:2,status:'delivered',d:'2026.05.16',t:'09:30',sp:'Сарнай',items:mkD([4,5],[5,30],[8,2]),pm:'cash',ps:'paid',notes:''},
+];
+const getC=(custs,id)=>custs.find(c=>c.id===id)||{name:'?',reg:'',ph:'',addr:''};
+const f$=n=>Number(n||0).toLocaleString()+'₮';
+function calc(items){const s=items.reduce((a,i)=>a+i.q*i.up,0);const v=Math.round(s*.1);return{sub:s,vat:v,total:s+v}}
+function paidAmt(o){return Number(o.paid ?? (o.ps==='paid'?calc(o.items).total:0))}
+function payState(o){const total=calc(o.items).total;const paid=Math.min(total,paidAmt(o));return paid>=total?'paid':paid>0?'partial':'pending'}
+const genId=()=>{const n=new Date();const mm=String(n.getMonth()+1).padStart(2,'0');const dd=String(n.getDate()).padStart(2,'0');return`Z-${String(n.getFullYear()).slice(2)}${mm}${dd}-${String(Math.floor(Math.random()*900)+100)}`};
+const today=()=>{const n=new Date();const mm=String(n.getMonth()+1).padStart(2,'0');const dd=String(n.getDate()).padStart(2,'0');const HH=String(n.getHours()).padStart(2,'0');const MM=String(n.getMinutes()).padStart(2,'0');const SS=String(n.getSeconds()).padStart(2,'0');return{d:`${n.getFullYear()}.${mm}.${dd}`,t:`${HH}:${MM}:${SS}`}};
+function dlCSV(rows,fn){const csv='\uFEFF'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url)}
 
-          <h2 class="role-title">Эрхээ сонгоно уу</h2>
-          <div class="role-card-list">
-            <button class="role-card" type="button" data-login-role="accountant">
-              <span class="role-icon">▣</span>
-              <span><strong>Нягтлан</strong><small>Тайлан, захиалга</small></span>
-              <i>›</i>
-            </button>
-            <button class="role-card" type="button" data-login-role="admin">
-              <span class="role-icon">■</span>
-              <span><strong>Admin</strong><small>Системийн тохиргоо</small></span>
-              <i>›</i>
-            </button>
-            <button class="role-card" type="button" data-login-role="sales">
-              <span class="role-icon">◆</span>
-              <span><strong>Борлуулагч</strong><small>Борлуулалтын ажилтан</small></span>
-              <i>›</i>
-            </button>
-          </div>
-          <p class="role-footnote">Үргэлжлүүлэхийн тулд эрхээ сонгоно уу</p>
-        </div>
+function Badge({s,t='o'}){const d=t==='o'?ST[s]:PS[s];if(!d)return null;return <span style={{background:d.bg,color:d.tc,fontSize:11,padding:'2px 10px',borderRadius:99,fontWeight:600,whiteSpace:'nowrap',display:'inline-block'}}>{d.l}</span>}
+function Hdr({title,sub,back,right}){return(<div className="no-print" style={{background:B,padding:'14px 16px 18px'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><div style={{display:'flex',gap:10,alignItems:'center'}}>{back&&<button onClick={back} style={{background:'rgba(255,255,255,.2)',border:'none',color:W,cursor:'pointer',width:32,height:32,borderRadius:16,display:'flex',alignItems:'center',justifyContent:'center'}}><i className="ti ti-arrow-left" style={{fontSize:18}}/></button>}<div><div style={{fontSize:17,fontWeight:700,color:W}}>{title}</div>{sub&&<div style={{fontSize:11,opacity:.75,marginTop:1,color:W}}>{sub}</div>}</div></div>{right||null}</div></div>)}
+function Card({children,p=14,mb=0,style={}}){return <div style={{background:W,borderRadius:14,border:`0.5px solid ${BD}`,padding:p,marginBottom:mb,...style}}>{children}</div>}
+function Nav({tab,set,onNew}){const tabs=[{k:'home',ic:'ti-home',l:'Нүүр'},{k:'reports',ic:'ti-chart-bar',l:'Тайлан'},{k:'_'},{k:'orders',ic:'ti-list',l:'Захиалга'},{k:'more',ic:'ti-grid-dots',l:'Бусад'}];return(<div className="no-print" style={{background:W,borderTop:`0.5px solid ${BD}`,display:'flex',padding:'5px 0 10px',boxShadow:'0 -4px 16px rgba(0,0,0,.05)'}}>{tabs.map(it=>{if(it.k==='_')return(<div key="_" style={{flex:1,display:'flex',justifyContent:'center'}}><button onClick={onNew} style={{width:54,height:54,borderRadius:27,background:B,border:`4px solid ${BG}`,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',marginTop:-18,boxShadow:'0 4px 16px rgba(35,82,220,.45)'}}><i className="ti ti-plus" style={{fontSize:26,color:W}}/></button></div>);const a=tab===it.k;return(<button key={it.k} onClick={()=>set(it.k)} style={{flex:1,border:'none',background:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2,padding:'7px 0 0',color:a?B:MU}}><i className={`ti ${it.ic}`} style={{fontSize:22}}/><span style={{fontSize:10,fontWeight:a?700:400}}>{it.l}</span></button>);})}</div>)}
+function Btn({children,color=B,onClick,outline,small,disabled}){const bg=outline?W:disabled?'#d1d5db':color;const bc=outline?color:bg;return <button onClick={onClick} disabled={disabled} style={{background:bg,color:outline?color:W,border:`1.5px solid ${bc}`,borderRadius:small?7:11,padding:small?'6px 12px':'12px 8px',fontSize:small?12:13,fontWeight:600,cursor:disabled?'default':'pointer',flex:1,minWidth:80}}>{children}</button>}
+function Input({label,value,onChange,type='text',placeholder=''}){return <div><div style={{fontSize:10,color:MU,marginBottom:3}}>{label}</div><input className="input-sm" type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/></div>}
+function Sel({label,value,onChange,options}){return <div><div style={{fontSize:10,color:MU,marginBottom:3}}>{label}</div><select className="input-sm" value={value} onChange={e=>onChange(e.target.value)}>{options.map(o=><option key={o.v||o} value={o.v||o}>{o.l||o}</option>)}</select></div>}
 
-        <div id="login-step" class="login-step hidden">
-          <div class="login-hero">
-            <h2>Нэвтрэх</h2>
-            <p>Тавтай морилно уу. Та бүртгэлээрээ нэвтэрнэ үү.</p>
-          </div>
+function LoginScreen({onLogin}){const[em,setEm]=useState('bat@example.com');const[pw,setPw]=useState('Admin123!');const[err,setErr]=useState('');const[show,setShow]=useState(false);
+const doLogin=()=>{if(!em||!pw){setErr('Имэйл болон нууц үгийг оруулна уу');return}const u=INIT_USERS.find(x=>x.email.toLowerCase()===em.toLowerCase());if(u&&pw==='Admin123!'){onLogin(u)}else{setErr('Имэйл эсвэл нууц үг буруу байна')}};
+return(<div style={{minHeight:'100vh',background:B,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}><div style={{width:'100%',maxWidth:360}}><div style={{textAlign:'center',marginBottom:28}}><div style={{width:64,height:64,borderRadius:18,background:'rgba(255,255,255,.15)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 12px'}}><i className="ti ti-building-store" style={{fontSize:32,color:W}}/></div><div style={{fontSize:22,fontWeight:700,color:W}}>Захиалгын систем</div><div style={{fontSize:12,color:'rgba(255,255,255,.7)',marginTop:4}}>B2B Sales Order Management</div></div>
+<Card><div style={{fontSize:16,fontWeight:700,color:TX,marginBottom:16}}>Нэвтрэх</div><div style={{display:'flex',flexDirection:'column',gap:10}}>
+<Input label="Имэйл" value={em} onChange={setEm} type="email"/>
+<div><div style={{fontSize:10,color:MU,marginBottom:3}}>Нууц үг</div><div style={{position:'relative'}}><input className="input-sm" type={show?'text':'password'} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doLogin()}/><button onClick={()=>setShow(s=>!s)} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:MU,padding:2}}><i className={`ti ${show?'ti-eye-off':'ti-eye'}`} style={{fontSize:14}}/></button></div></div>
+{err&&<div style={{color:'#dc2626',fontSize:12}}>{err}</div>}
+<button onClick={doLogin} style={{background:B,color:W,border:'none',borderRadius:11,padding:14,fontSize:15,fontWeight:700,cursor:'pointer',width:'100%',marginTop:4}}>Нэвтрэх</button>
+<div style={{fontSize:11,color:MU,textAlign:'center'}}>bat@example.com · sarnai@example.com / Admin123!</div>
+</div></Card></div></div>)}
 
-          <form id="login-form" class="login-panel">
-            <div class="selected-role-card">
-              <span id="selected-role-icon" class="role-icon">◆</span>
-              <span><strong id="selected-role-name">Борлуулагч</strong><small id="selected-role-desc">Борлуулалтын ажилтан</small></span>
-              <button id="change-role" type="button">Солих</button>
-            </div>
-            <label class="visually-hidden">
-              Эрх
-              <select id="role-select">
-                <option value="sales">Борлуулагч</option>
-                <option value="accountant">Нягтлан</option>
-                <option value="admin">Admin</option>
-              </select>
-            </label>
-            <label>
-              Нэвтрэх нэр
-              <input id="username" value="bat" autocomplete="username" placeholder="Нэвтрэх нэрээ оруулна уу" />
-            </label>
-            <label>
-              Нууц үг
-              <input id="password" value="1234" type="password" autocomplete="current-password" placeholder="Нууц үгээ оруулна уу" />
-            </label>
-            <button class="primary-action" type="submit">Нэвтрэх</button>
-            <p class="contact-admin">Бүртгэл байхгүй юу? Админтай холбогдоно уу</p>
-          </form>
-        </div>
-      </section>
+function HomeScreen({orders,custs,user,onDetail,onViewAll}){
+const[showNotifications,setShowNotifications]=useState(false);const[showCustomers,setShowCustomers]=useState(false);const[homeSp,setHomeSp]=useState('all');
+const salespersonScope=userSalesperson(user);const salespeople=useMemo(()=>['all',...new Set(orders.map(o=>o.sp))],[orders]);
+const scopedOrders=useMemo(()=>salespersonScope?orders.filter(o=>o.sp===salespersonScope):(homeSp==='all'?orders:orders.filter(o=>o.sp===homeSp)),[orders,salespersonScope,homeSp]);
+const s=useMemo(()=>{const act=scopedOrders.filter(o=>o.status!=='cancelled');const ordered=act.reduce((a,o)=>a+calc(o.items).total,0);const paid=act.reduce((a,o)=>a+paidAmt(o),0);const unpaid=ordered-paid;const plan=1500000;const paidPct=plan?Math.round(paid/plan*100):0;const paidFill=Math.min(100,paidPct);const overPct=Math.max(0,paidPct-100);const pendingPct=plan&&paidPct<100?Math.min(100-paidFill,Math.round(unpaid/plan*100)):0;const projectedPct=Math.min(100,paidFill+pendingPct);return{act,ordered,paid,unpaid,plan,paidPct,paidFill,overPct,pendingPct,projectedPct,cnt:act.length,over:paidPct>100}},[scopedOrders]);
+const customers=useMemo(()=>{const m=new Map();s.act.forEach(o=>{const c=getC(custs,o.cid);const cur=m.get(o.cid)||{id:o.cid,name:c.name,total:0,count:0};cur.total+=calc(o.items).total;cur.count+=1;m.set(o.cid,cur)});return[...m.values()].sort((a,b)=>b.total-a.total)},[s.act,custs]);
+const notices=useMemo(()=>{const active=scopedOrders.filter(o=>o.status!=='cancelled');const newOrders=active.filter(o=>o.status==='new');const pending=active.filter(o=>payState(o)!=='paid');const deliveredPending=active.filter(o=>o.status==='delivered'&&payState(o)!=='paid');const list=[];if(newOrders.length){const o=newOrders[0];list.push({ic:'ti-file-plus',bg:'#dbeafe',tc:'#1d4ed8',title:newOrders.length+' шинэ захиалга',body:getC(custs,o.cid).name+' бэлтгэх хүлээлттэй байна.',order:o})}if(pending.length){const amount=pending.reduce((a,o)=>a+Math.max(0,calc(o.items).total-paidAmt(o)),0);list.push({ic:'ti-clock',bg:'#fef3c7',tc:'#b45309',title:pending.length+' төлбөр хүлээгдэж байна',body:'Нийт үлдэгдэл '+f$(amount)+'.',action:'orders'})}if(deliveredPending.length){const o=deliveredPending[0];list.push({ic:'ti-truck-delivery',bg:'#ede9fe',tc:'#6d28d9',title:'Хүргэгдсэн боловч төлөгдөөгүй',body:getC(custs,o.cid).name+' захиалгын төлбөрийг шалгана уу.',order:o})}if(!list.length)list.push({ic:'ti-circle-check',bg:'#dcfce7',tc:'#15803d',title:'Шинэ мэдэгдэл алга',body:'Захиалга, төлбөр өөрчлөгдөхөд энд харагдана.'});return list},[scopedOrders,custs]);
+const noticeCount=notices.filter(n=>n.action||n.order).length;
+const openNotice=n=>{setShowNotifications(false);if(n.order)onDetail(n.order);else if(n.action==='orders')onViewAll()};
+const recent=scopedOrders.slice(0,3);
+return(<div><div style={{background:B,padding:'16px 16px 28px'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}><div><div style={{fontSize:12,opacity:.8,color:W}}>Сайн байна уу,</div><div style={{fontSize:22,fontWeight:700,color:W}}>{user?.name||'Хэрэглэгч'} 👋</div><div style={{fontSize:11,opacity:.65,marginTop:2,color:W}}>{roleLabel(user?.role)} · Өнөөдрийн борлуулалтын тойм</div></div><button onClick={()=>setShowNotifications(true)} aria-label="Мэдэгдэл" style={{width:40,height:40,borderRadius:20,border:'none',background:'rgba(255,255,255,.15)',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',cursor:'pointer'}}><i className="ti ti-bell" style={{fontSize:20,color:W}}/>{noticeCount>0&&<div style={{position:'absolute',top:4,right:4,minWidth:16,height:16,padding:'0 4px',borderRadius:8,background:'#ef4444',fontSize:9,color:W,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,border:'1.5px solid #fff'}}>{noticeCount}</div>}</button></div></div>
+{showNotifications&&<div className="no-print" onClick={()=>setShowNotifications(false)} style={{position:'fixed',inset:0,zIndex:80,background:'rgba(15,23,42,.35)',display:'flex',alignItems:'flex-end',justifyContent:'center'}}><div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:430,background:W,borderRadius:'18px 18px 0 0',padding:'14px 14px 20px',boxShadow:'0 -18px 45px rgba(15,23,42,.25)'}}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}><div><div style={{fontSize:16,fontWeight:700,color:TX}}>Мэдэгдэл</div><div style={{fontSize:11,color:MU,marginTop:2}}>Захиалга болон төлбөрийн сануулга</div></div><button onClick={()=>setShowNotifications(false)} style={{width:32,height:32,borderRadius:16,border:'none',background:BG,color:MU,cursor:'pointer'}}><i className="ti ti-x" style={{fontSize:18}}/></button></div><div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:'55vh',overflowY:'auto'}}>{notices.map((n,i)=><div key={i} onClick={()=>openNotice(n)} style={{display:'flex',gap:10,padding:12,border:'0.5px solid '+BD,borderRadius:13,background:n.action||n.order?'#fff':'#f8fafc',cursor:n.action||n.order?'pointer':'default'}}><div style={{width:38,height:38,borderRadius:12,background:n.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><i className={'ti '+n.ic} style={{fontSize:19,color:n.tc}}/></div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:700,color:TX,lineHeight:1.3}}>{n.title}</div><div style={{fontSize:11,color:MU,lineHeight:1.45,marginTop:3}}>{n.body}</div>{(n.action||n.order)&&<div style={{fontSize:11,color:B,fontWeight:700,marginTop:7}}>Харах →</div>}</div></div>)}</div></div></div>}
+{showCustomers&&<div className="no-print" onClick={()=>setShowCustomers(false)} style={{position:'fixed',inset:0,zIndex:82,background:'rgba(15,23,42,.35)',display:'flex',alignItems:'flex-end',justifyContent:'center'}}><div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:430,background:W,borderRadius:'18px 18px 0 0',padding:'14px 14px 20px',boxShadow:'0 -18px 45px rgba(15,23,42,.25)'}}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}><div><div style={{fontSize:16,fontWeight:800,color:TX}}>Бүх харилцагчид</div><div style={{fontSize:11,color:MU,marginTop:2}}>Нийт худалдан авалтын дүнгээр</div></div><button onClick={()=>setShowCustomers(false)} style={{width:32,height:32,borderRadius:16,border:'none',background:BG,color:MU,cursor:'pointer'}}><i className="ti ti-x" style={{fontSize:18}}/></button></div><div style={{display:'flex',flexDirection:'column',gap:8,maxHeight:'58vh',overflowY:'auto'}}>{customers.length?customers.map((c,i)=><div key={c.id} style={{display:'flex',alignItems:'center',gap:10,padding:12,border:'0.5px solid '+BD,borderRadius:13}}><div style={{width:30,height:30,borderRadius:15,background:i<3?'#eff6ff':BG,color:i<3?B:MU,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800}}>{i+1}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:700,color:TX}}>{c.name}</div><div style={{fontSize:11,color:MU,marginTop:2}}>{c.count} захиалга</div></div><div style={{fontSize:13,fontWeight:800,color:B}}>{f$(c.total)}</div></div>):<div style={{padding:24,textAlign:'center',color:MU,fontSize:13}}>Харилцагчийн худалдан авалт алга.</div>}</div></div></div>}
+<div style={{padding:'0 12px',marginTop:-10}}>
+{canSeeAllSales(user)&&<Card p={12} mb={10}><div style={{fontSize:10,color:MU,marginBottom:4}}>Борлуулагч</div><select value={homeSp} onChange={e=>setHomeSp(e.target.value)} style={{width:'100%',border:'0.5px solid '+BD,borderRadius:8,padding:'8px 10px',fontSize:12,color:TX,outline:'none',background:W}}>{salespeople.map(sp=><option key={sp} value={sp}>{sp==='all'?'Бүгд':sp}</option>)}</select></Card>}
+<Card p={14} mb={16} style={{background:s.over?'linear-gradient(135deg,#fff,#f5f3ff)':'linear-gradient(135deg,#fff,#f8fff9)',border:'0.5px solid '+(s.over?'#c4b5fd':'#bbf7d0')}}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,marginBottom:12}}><div><div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}><div style={{width:34,height:34,borderRadius:10,background:s.over?'#ede9fe':'#dcfce7',display:'flex',alignItems:'center',justifyContent:'center'}}><i className="ti ti-chart-line" style={{fontSize:18,color:s.over?'#7c3aed':'#16a34a'}}/></div><div style={{fontSize:12,color:MU,fontWeight:700}}>Борлуулалт</div></div><div style={{fontSize:24,fontWeight:900,color:TX,lineHeight:1}}>{f$(s.paid)}</div><div style={{fontSize:11,color:MU,marginTop:6}}>Төлөвлөгөө {f$(s.plan)} · биелэлт <span style={{color:s.over?'#7c3aed':'#16a34a',fontWeight:900}}>{s.paidPct}%</span></div>{s.over&&<div style={{display:'inline-flex',alignItems:'center',gap:4,background:'#ede9fe',color:'#7c3aed',borderRadius:99,padding:'3px 8px',fontSize:10,fontWeight:900,marginTop:7}}><i className="ti ti-arrow-up-right" style={{fontSize:12}}/> +{s.overPct}% давсан</div>}</div><div style={{width:82,height:82,borderRadius:41,background:s.over?'conic-gradient(#7c3aed 0 100%)':'conic-gradient(#16a34a 0 '+s.paidFill+'%, #f59e0b '+s.paidFill+'% '+s.projectedPct+'%, #e5e7eb '+s.projectedPct+'% 100%)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><div style={{width:60,height:60,borderRadius:30,background:W,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',fontWeight:900,color:s.over?'#7c3aed':'#16a34a'}}><span style={{fontSize:16}}>{s.paidPct}%</span><span style={{fontSize:9,color:MU,fontWeight:700}}>{s.over?'давсан':'явц'}</span></div></div></div><div style={{height:8,borderRadius:99,background:'#e5e7eb',overflow:'hidden',display:'flex',marginBottom:s.over?6:10}}><div style={{width:s.paidFill+'%',background:s.over?'#7c3aed':'#16a34a'}}/><div style={{width:s.pendingPct+'%',background:'#f59e0b'}}/></div>{s.over&&<div style={{height:5,borderRadius:99,background:'#ddd6fe',overflow:'hidden',marginBottom:10}}><div style={{width:Math.min(100,s.overPct)+'%',height:'100%',background:'#a855f7'}}/></div>}<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><div style={{background:s.over?'#f5f3ff':'#ecfdf5',borderRadius:10,padding:'8px 10px'}}><div style={{fontSize:10,color:MU}}>Борлуулалт</div><div style={{fontSize:13,fontWeight:800,color:s.over?'#7c3aed':'#16a34a'}}>{f$(s.paid)}</div></div><div style={{background:'#fffbeb',borderRadius:10,padding:'8px 10px'}}><div style={{fontSize:10,color:MU}}>Хүлээгдэж буй</div><div style={{fontSize:13,fontWeight:800,color:'#b45309'}}>{f$(s.unpaid)}</div></div></div><div style={{fontSize:10,color:MU,lineHeight:1.35,marginTop:9}}>{s.over?'Нил ягаан хэсэг нь төлөвлөгөөнөөс давсан борлуулалт. Биелэлт 100%-аас дээш тооцогдоно.':'Шар хэсэг нь хүлээгдэж буй төлбөр. Энэ нь борлуулалтын дүнд нэмэгдээгүй.'}</div></Card>
+<Card p={0} mb={16}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 14px',borderBottom:'0.5px solid '+BD}}><div style={{fontSize:15,fontWeight:700,color:TX}}>Top харилцагчид</div><button onClick={()=>setShowCustomers(true)} style={{background:'none',border:'none',color:B,fontSize:12,cursor:'pointer',fontWeight:700,padding:0}}>Бүгдийг харах →</button></div>{customers.slice(0,3).map((c,i)=><div key={c.id} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderBottom:i<Math.min(3,customers.length)-1?'0.5px solid '+BD:'none'}}><div style={{width:28,height:28,borderRadius:14,background:'#eff6ff',color:B,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800}}>{i+1}</div><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:700,color:TX}}>{c.name}</div><div style={{fontSize:11,color:MU}}>{c.count} захиалга</div></div><div style={{fontSize:13,fontWeight:800,color:B}}>{f$(c.total)}</div></div>)}</Card>
+<div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}><div style={{fontSize:15,fontWeight:600,color:TX}}>Сүүлийн захиалга</div><button onClick={onViewAll} style={{background:'none',border:'none',color:B,fontSize:12,cursor:'pointer',fontWeight:500,padding:0}}>Бүгдийг харах →</button></div>
+<Card p={0} mb={16}>{recent.map((o,i,a)=>{const c=getC(custs,o.cid);const{total}=calc(o.items);const pAmt=paidAmt(o);const st=ST[o.status]||{};return(<div key={o.id} onClick={()=>onDetail(o)} style={{padding:'12px 14px',borderBottom:i<a.length-1?'0.5px solid '+BD:'none',cursor:'pointer',display:'flex',alignItems:'flex-start',gap:12}}><div style={{width:38,height:38,borderRadius:19,background:st.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><i className={'ti '+(st.ic||'ti-file-text')} style={{fontSize:18,color:st.tc}}/></div><div style={{flex:1,minWidth:0}}><div style={{display:'flex',gap:6,alignItems:'center',marginBottom:3,flexWrap:'wrap'}}><span style={{fontSize:13,fontWeight:600,color:TX}}>№{o.id}</span><Badge s={o.status}/></div><div style={{fontSize:11,color:MU}}>{c.name} · {o.d}</div>{o.status!=='cancelled'&&<div style={{fontSize:11,color:MU,marginTop:4}}><span style={{color:'#16a34a'}}>Төлсөн: {f$(pAmt)}</span>{total-pAmt>0&&<span style={{color:'#d97706'}}> · Үлдэгдэл: {f$(total-pAmt)}</span>}</div>}</div><div style={{fontSize:14,fontWeight:700,color:TX,flexShrink:0}}>{f$(total)}</div></div>);})}</Card>
+</div></div>)}
+function OrdersScreen({orders,custs,onDetail,onNew}){const[atab,setAtab]=useState('all');const[search,setSearch]=useState('');
+const tabs=[{k:'all',l:'Бүгд'},{k:'new',l:'Шинэ'},{k:'preparing',l:'Бэлтгэгдэж байна'},{k:'delivered',l:'Хүргэгдсэн'},{k:'cancelled',l:'Цуцлагдсан'}];
+const filt=useMemo(()=>{let list=atab==='all'?orders:orders.filter(o=>o.status===atab);if(search)list=list.filter(o=>{const c=getC(custs,o.cid);return o.id.toLowerCase().includes(search.toLowerCase())||c.name.toLowerCase().includes(search.toLowerCase())});return list},[orders,atab,search,custs]);
+const activeFilt=filt.filter(o=>o.status!=='cancelled');const tot=activeFilt.reduce((a,o)=>a+calc(o.items).total,0);const paid=activeFilt.reduce((a,o)=>a+paidAmt(o),0);
+return(<div><Hdr title="Захиалга" sub="Бүх захиалга, төлөв, төлбөрийн мэдээлэл" right={<button onClick={onNew} style={{background:'rgba(255,255,255,.18)',color:W,border:'none',borderRadius:8,padding:'6px 12px',fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontWeight:500}}><i className="ti ti-plus" style={{fontSize:14}}/> Шинэ</button>}/>
+<div style={{padding:'12px 12px 0'}}>
+<Card p="9px 12px" mb={8} style={{display:'flex',alignItems:'center',gap:8}}><i className="ti ti-search" style={{fontSize:16,color:MU}}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Харилцагч, захиалгын дугаар хайх" style={{border:'none',outline:'none',flex:1,fontSize:13,color:TX,background:'transparent'}}/>{search&&<button onClick={()=>setSearch('')} style={{background:'none',border:'none',cursor:'pointer',color:MU,padding:0,display:'flex'}}><i className="ti ti-x" style={{fontSize:14}}/></button>}</Card>
+<Card p="10px 12px" mb={8} style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:4}}>{[{l:'Нийт',v:`${filt.length}`},{l:'Нийт дүн',v:f$(tot),c:TX},{l:'Төлсөн',v:f$(paid),c:'#16a34a'},{l:'Үлдэгдэл',v:f$(tot-paid),c:'#d97706'}].map(s=>(<div key={s.l} style={{textAlign:'center'}}><div style={{fontSize:9,color:MU,marginBottom:2}}>{s.l}</div><div style={{fontSize:12,fontWeight:700,color:s.c||TX}}>{s.v}</div></div>))}</Card>
+<div style={{display:'flex',gap:4,overflowX:'auto',marginBottom:8,paddingBottom:2}}>{tabs.map(t=>{const cnt=t.k==='all'?orders.length:orders.filter(o=>o.status===t.k).length;const a=atab===t.k;return <button key={t.k} onClick={()=>setAtab(t.k)} style={{background:a?B:W,color:a?W:MU,border:`0.5px solid ${a?B:BD}`,borderRadius:99,padding:'5px 13px',fontSize:11,cursor:'pointer',whiteSpace:'nowrap',fontWeight:a?600:400}}>{t.l} {cnt}</button>;})}</div>
+</div>
+<div style={{padding:'0 12px 12px'}}><Card p={0}>{filt.length===0?<div style={{padding:32,textAlign:'center',color:MU,fontSize:13}}>Захиалга олдсонгүй</div>:filt.map((o,i)=>{const c=getC(custs,o.cid);const{total}=calc(o.items);const pAmt=paidAmt(o);const st=ST[o.status]||{};return(<div key={o.id} onClick={()=>onDetail(o)} style={{padding:'12px 14px',borderBottom:i<filt.length-1?`0.5px solid ${BD}`:'none',cursor:'pointer',display:'flex',gap:12,alignItems:'flex-start'}}><div style={{width:38,height:38,borderRadius:19,background:st.bg,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:2}}><i className={`ti ${st.ic||'ti-file-text'}`} style={{fontSize:18,color:st.tc}}/></div><div style={{flex:1,minWidth:0}}><div style={{display:'flex',gap:6,alignItems:'center',marginBottom:2,flexWrap:'wrap'}}><span style={{fontSize:13,fontWeight:600,color:TX}}>#{o.id}</span><Badge s={o.status}/></div><div style={{fontSize:12,color:MU,marginBottom:1}}>{c.name}</div><div style={{fontSize:11,color:MU}}>{o.d} · {o.t} · {o.items.length} бараа</div></div><div style={{textAlign:'right',flexShrink:0}}><div style={{fontSize:13,fontWeight:700,color:TX}}>{f$(total)}</div>{o.status!=='cancelled'&&<><div style={{fontSize:11,color:'#16a34a'}}>Төлсөн: {f$(pAmt)}</div>{total-pAmt>0&&<div style={{fontSize:11,color:'#d97706'}}>Үлдэгдэл: {f$(total-pAmt)}</div>}</>}</div></div>);})}
+</Card>{filt.length>0&&<div style={{textAlign:'center',fontSize:12,color:MU,marginTop:8}}>Нийт {filt.length} захиалга</div>}</div></div>)}
 
-      <section id="app-screen" class="app-screen hidden">
-        <header class="top-bar">
-          <div class="brand-lockup compact">
-            <img src="./assets/batmon-icon.png" alt="Batmon" class="brand-mark" />
-            <div>
-              <p id="current-role" class="eyebrow">Борлуулагч</p>
-              <h2 id="user-title">Сайн байна уу</h2>
-            </div>
-          </div>
-          <button id="logout-btn" class="icon-button" type="button" aria-label="Цэс">☰</button>
-        </header>
+function OrderDetail({order,custs,back,onUpdateStatus,onUpdatePayment,onEdit,onCopy}){
+const c=getC(custs,order.cid);const{sub,vat,total}=calc(order.items);const paid=paidAmt(order);const cappedPaid=Math.min(total,paid);const balance=Math.max(0,total-cappedPaid);const pState=payState(order);const[payInput,setPayInput]=useState('');const[showCancel,setShowCancel]=useState(false);const[cancelReason,setCancelReason]=useState('');
+const STEPS=['new','preparing','delivered'];const SLABS=['Шинэ','Бэлтгэгдэж байна','Хүргэгдсэн'];
+const cur=order.status==='cancelled'?-1:STEPS.indexOf(order.status);
+const actions=order.status==='cancelled'?[]:[order.status==='new'&&{l:'Бэлтгэж эхлэх',ns:'preparing',c:B},order.status==='preparing'&&{l:'Хүргэгдсэн болгох',ns:'delivered',c:'#16a34a'},order.status!=='delivered'&&{l:'Цуцлах',ns:'cancelled',c:'#dc2626'}].filter(Boolean);
+const submitCancel=()=>{if(!cancelReason.trim())return;onUpdateStatus(order.id,'cancelled',cancelReason.trim());setShowCancel(false)};
+return(<div><div className="no-print"><Hdr title={`Захиалга #${order.id}`} sub={`${order.d} · ${order.t}`} back={back} right={<Badge s={order.status}/>}/></div>
+<div className="print-only" style={{padding:'20px',textAlign:'center',borderBottom:'2px solid '+TX,marginBottom:16}}><div style={{fontSize:20,fontWeight:700}}>ЗАХИАЛГА #{order.id}</div><div style={{fontSize:12,color:MU}}>{order.d} · {order.t}</div></div>
+{showCancel&&<div className="no-print" onClick={()=>setShowCancel(false)} style={{position:'fixed',inset:0,zIndex:90,background:'rgba(15,23,42,.4)',display:'flex',alignItems:'flex-end',justifyContent:'center'}}><div onClick={e=>e.stopPropagation()} style={{width:'100%',maxWidth:430,background:W,borderRadius:'18px 18px 0 0',padding:16,boxShadow:'0 -18px 45px rgba(15,23,42,.25)'}}><div style={{fontSize:16,fontWeight:800,color:TX,marginBottom:4}}>Захиалга цуцлах</div><div style={{fontSize:12,color:MU,marginBottom:12}}>Цуцлах шалтгаанаа бичнэ үү. Цуцлагдсан захиалгын дүн борлуулалтад орохгүй.</div><textarea value={cancelReason} onChange={e=>setCancelReason(e.target.value)} placeholder="Жишээ: Харилцагч захиалгаа цуцалсан..." style={{width:'100%',height:86,border:'0.5px solid '+BD,borderRadius:10,padding:10,fontSize:14,resize:'none',outline:'none',fontFamily:'inherit',boxSizing:'border-box',marginBottom:10}}/><div style={{display:'flex',gap:8}}><Btn outline color={MU} onClick={()=>setShowCancel(false)}>Болих</Btn><Btn color="#dc2626" onClick={submitCancel} disabled={!cancelReason.trim()}>Цуцлах</Btn></div></div></div>}
+<div style={{padding:'12px 12px',display:'flex',flexDirection:'column',gap:10}}>
+<Card style={{display:'flex',alignItems:'center',gap:12}}><div style={{width:42,height:42,borderRadius:21,background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><i className="ti ti-building" style={{fontSize:22,color:B}}/></div><div style={{flex:1}}><div style={{fontSize:14,fontWeight:700,color:TX}}>{c.name}</div><div style={{fontSize:12,color:MU}}>РД: {c.reg} · Утас: {c.ph}</div></div></Card>
+{order.status!=='cancelled'&&<Card><div style={{fontSize:12,fontWeight:700,color:TX,marginBottom:12}}>Захиалгын явц</div><div style={{display:'flex',alignItems:'flex-start'}}>{STEPS.map((s,i)=>(<div key={s} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}><div style={{display:'flex',alignItems:'center',width:'100%'}}>{i>0&&<div style={{flex:1,height:2,background:i<=cur?B:BD}}/>}<div style={{width:14,height:14,borderRadius:7,background:i<=cur?B:BD,flexShrink:0,boxShadow:i===cur?'0 0 0 3px '+B+'33':'none'}}/>{i<STEPS.length-1&&<div style={{flex:1,height:2,background:i<cur?B:BD}}/>}</div><div style={{fontSize:10,color:i<=cur?B:MU,textAlign:'center',lineHeight:1.3,fontWeight:i===cur?700:500}}>{SLABS[i]}</div></div>))}</div></Card>}
+<Card style={{border:pState==='paid'?'1px solid #bbf7d0':'0.5px solid '+BD,background:pState==='paid'?'#f0fdf4':W}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,marginBottom:12}}><div><div style={{fontSize:14,fontWeight:800,color:TX}}>Төлбөрийн мэдээлэл</div><div style={{fontSize:11,color:MU,marginTop:3}}>{order.pm==='cash'?'Бэлэн төлөлт':'Шилжүүлэг'} · захиалгын явцаас тусдаа</div></div><Badge s={pState} t='p'/></div><div style={{height:8,borderRadius:99,background:'#eef2f7',overflow:'hidden',marginBottom:12}}><div style={{height:'100%',width:Math.min(100,Math.round(cappedPaid/total*100))+'%',background:pState==='paid'?'#16a34a':'#f59e0b'}}/></div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:pState==='paid'||order.status==='cancelled'?0:12}}>{[{l:'Нийт',v:f$(total),c:TX},{l:'Төлсөн',v:f$(cappedPaid),c:'#16a34a'},{l:'Үлдэгдэл',v:f$(balance),c:balance?'#d97706':'#16a34a',click:balance>0&&order.status!=='cancelled'?()=>setPayInput(String(balance)):null}].map(x=><button key={x.l} type="button" onClick={x.click||undefined} style={{background:BG,border:x.click?'1px solid #f59e0b':'none',borderRadius:10,padding:'8px 6px',textAlign:'center',cursor:x.click?'pointer':'default'}}><div style={{fontSize:10,color:MU,marginBottom:3}}>{x.l}</div><div style={{fontSize:13,fontWeight:800,color:x.c}}>{x.v}</div></button>)}</div>{pState!=='paid'&&order.status!=='cancelled'&&<div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:8,alignItems:'end'}}><Input label="Төлөх дүн" value={payInput} onChange={setPayInput} type="number"/><button onClick={()=>onUpdatePayment(order.id,Number(payInput)||0)} disabled={!Number(payInput)} style={{height:38,padding:'0 14px',border:'none',borderRadius:10,background:Number(payInput)?B:'#d1d5db',color:W,fontSize:12,fontWeight:700,cursor:Number(payInput)?'pointer':'default'}}>Төлсөн</button></div>}{order.status==='cancelled'&&<div style={{fontSize:11,color:'#991b1b',lineHeight:1.4,marginTop:10}}>Цуцлагдсан захиалга дээр төлбөр бүртгэх боломжгүй.</div>}</Card>
+<Card>{[{ic:'ti-calendar',l:'Огноо',v:`${order.d} ${order.t}`},{ic:'ti-map-pin',l:'Хаяг',v:c.addr},order.notes&&{ic:'ti-pencil',l:'Тэмдэглэл',v:order.notes},order.cancelReason&&{ic:'ti-alert-triangle',l:'Цуцалсан тайлбар',v:order.cancelReason}].filter(Boolean).map(r=>(<div key={r.l} style={{display:'flex',gap:10,marginBottom:7,alignItems:'flex-start'}}><i className={'ti '+r.ic} style={{fontSize:15,color:MU,flexShrink:0,marginTop:1}}/><div><div style={{fontSize:10,color:MU}}>{r.l}</div><div style={{fontSize:12,color:TX,lineHeight:1.5}}>{r.v}</div></div></div>))}</Card>
+<Card><div style={{fontSize:13,fontWeight:700,color:TX,marginBottom:10}}>Барааны мэдээлэл</div><div style={{display:'grid',gridTemplateColumns:'1fr auto auto auto',gap:'3px 8px',fontSize:10,color:MU,marginBottom:6,paddingBottom:6,borderBottom:'0.5px solid '+BD}}><div>Бараа</div><div style={{textAlign:'center'}}>Тоо</div><div>Нэгж үнэ</div><div style={{textAlign:'right'}}>Нийт</div></div>{order.items.map(item=>(<div key={item.pid} style={{display:'grid',gridTemplateColumns:'1fr auto auto auto',gap:'3px 8px',alignItems:'center',marginBottom:8,paddingBottom:8,borderBottom:'0.5px solid '+BD}}><div><div style={{fontSize:12,color:TX,fontWeight:500}}>{item.name}</div><div style={{fontSize:9,color:MU}}>SKU: {item.sku}</div></div><div style={{fontSize:12,color:TX,border:'0.5px solid '+BD,borderRadius:6,padding:'2px 8px',textAlign:'center',fontWeight:600}}>{item.q}</div><div style={{fontSize:11,color:MU}}>{f$(item.up)}</div><div style={{fontSize:12,fontWeight:700,color:TX,textAlign:'right'}}>{f$(item.q*item.up)}</div></div>))}<div style={{display:'flex',flexDirection:'column',gap:2,marginTop:4}}><div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:MU}}><span>Дүн (НӨАТ-гүй)</span><span>{f$(sub)}</span></div><div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:MU}}><span>НӨАТ (10%)</span><span>{f$(vat)}</span></div><div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:700,color:B,marginTop:4,paddingTop:6,borderTop:'0.5px solid '+BD}}><span>Нийт дүн</span><span>{f$(total)}</span></div></div></Card>
+{actions.length>0&&<div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{actions.map(a=><Btn key={a.ns} color={a.c} onClick={()=>a.ns==='cancelled'?setShowCancel(true):onUpdateStatus(order.id,a.ns)}>{a.l}</Btn>)}</div>}
+<div className="no-print" style={{display:'flex',gap:8}}><Btn outline color={B} onClick={()=>onEdit(order)}><i className="ti ti-edit" style={{fontSize:13,marginRight:4}}/>Засах</Btn><Btn outline color="#7c3aed" onClick={()=>onCopy(order)}><i className="ti ti-copy" style={{fontSize:13,marginRight:4}}/>Хуулах</Btn><Btn outline color="#16a34a" onClick={()=>window.print()}><i className="ti ti-printer" style={{fontSize:13,marginRight:4}}/>Хэвлэх</Btn></div>
+{order.status==='cancelled'&&<Card style={{background:'#fee2e2',border:'0.5px solid #fca5a5'}}><div style={{color:'#991b1b',fontSize:13,textAlign:'center',fontWeight:700}}>Энэ захиалга цуцлагдсан байна</div>{order.cancelReason&&<div style={{color:'#991b1b',fontSize:12,marginTop:6,lineHeight:1.4}}>Тайлбар: {order.cancelReason}</div>}</Card>}
+</div><div style={{height:16}}/></div>)}
+function NewOrderScreen({onSave,onUpdate,back,products,custs,editOrder,user}){
+const isEdit=!!editOrder;
+const[step,setStep]=useState('form');
+const[cust,setCust]=useState(isEdit?custs.find(c=>c.id===editOrder.cid)||null:null);
+const[items,setItems]=useState(isEdit?editOrder.items.map(i=>({...i})):[]);
+const[pm,setPm]=useState(isEdit?editOrder.pm:'cash');
+const[notes,setNotes]=useState(isEdit?editOrder.notes||'':'');
+const{sub,vat,total}=useMemo(()=>calc(items),[items]);
+const orderStamp=isEdit?{d:editOrder.d,t:editOrder.t}:(()=>today())();
+const addOrInc=p=>setItems(prev=>{const ex=prev.find(i=>i.pid===p.id);if(ex)return prev.map(i=>i.pid===p.id?{...i,q:i.q+1}:i);return[...prev,{pid:p.id,q:1,up:p.price,name:p.name,sku:p.sku}]});
+const setQ=(pid,d)=>setItems(prev=>{const u=prev.map(i=>i.pid===pid?{...i,q:Math.max(1,i.q+d)}:i);return d<0&&u.find(i=>i.pid===pid)?.q===0?u.filter(i=>i.pid!==pid):u});
+const remove=pid=>setItems(prev=>prev.filter(i=>i.pid!==pid));
+const handleSave=()=>{if(!cust||items.length===0)return;if(isEdit){onUpdate({...editOrder,cid:cust.id,items,pm,notes});return}const{d,t}=today();onSave({id:genId(),cid:cust.id,status:'new',d,t,sp:userSalesperson(user)||'Бат',items,pm,ps:'pending',paid:0,notes})};
+if(step==='cust')return(<div><Hdr title="Харилцагч сонгох" back={()=>setStep('form')}/><div style={{padding:'8px 12px'}}>{custs.map(c=>(<div key={c.id} onClick={()=>{setCust(c);setStep('form')}} style={{background:W,borderRadius:12,border:`0.5px solid ${cust?.id===c.id?B:BD}`,padding:'12px 14px',marginBottom:8,cursor:'pointer',display:'flex',alignItems:'center',gap:12}}><div style={{width:38,height:38,borderRadius:19,background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><i className="ti ti-building" style={{fontSize:18,color:B}}/></div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:TX}}>{c.name}</div><div style={{fontSize:11,color:MU}}>РД: {c.reg} · {c.ph}</div></div><i className="ti ti-chevron-right" style={{fontSize:16,color:MU}}/></div>))}</div></div>);
+if(step==='prod')return(<div><Hdr title="Бараа нэмэх" back={()=>setStep('form')}/><div style={{padding:'8px 12px'}}>{products.map(p=>{const inc=items.find(i=>i.pid===p.id);return(<div key={p.id} onClick={()=>{addOrInc(p);setStep('form')}} style={{background:W,borderRadius:12,border:`0.5px solid ${inc?B:BD}`,padding:'12px 14px',marginBottom:8,cursor:'pointer',display:'flex',alignItems:'center',gap:12}}><div style={{width:38,height:38,borderRadius:9,background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><i className="ti ti-package" style={{fontSize:18,color:B}}/></div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:TX}}>{p.name}</div><div style={{fontSize:11,color:MU}}>SKU: {p.sku} · {p.cat}</div></div><div style={{textAlign:'right',flexShrink:0}}><div style={{fontSize:13,fontWeight:700,color:B}}>{f$(p.price)}</div>{inc&&<div style={{fontSize:10,color:'#16a34a',fontWeight:600}}>✓ {inc.q} нэгж</div>}</div></div>)})}</div></div>);
+return(<div><Hdr title={isEdit?'Захиалга засах':'Шинэ захиалга'} sub="Захиалгын мэдээллээ оруулна уу" back={back}/>
+<div style={{padding:'12px 12px',display:'flex',flexDirection:'column',gap:10}}>
+<Card><div style={{fontSize:13,fontWeight:600,color:TX,marginBottom:8}}>Харилцагч</div>{cust?(<div onClick={()=>setStep('cust')} style={{display:'flex',alignItems:'center',gap:12,cursor:'pointer'}}><div style={{width:42,height:42,borderRadius:21,background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><i className="ti ti-building" style={{fontSize:20,color:B}}/></div><div style={{flex:1}}><div style={{fontSize:14,fontWeight:700,color:TX}}>{cust.name}</div><div style={{fontSize:12,color:MU}}>РД: {cust.reg} · {cust.ph}</div></div><i className="ti ti-chevron-right" style={{fontSize:16,color:MU}}/></div>):(<button onClick={()=>setStep('cust')} style={{width:'100%',padding:'12px 0',border:`1.5px dashed ${B}`,borderRadius:10,background:'#eff6ff',color:B,cursor:'pointer',fontSize:13,display:'flex',alignItems:'center',justifyContent:'center',gap:6,fontWeight:500}}><i className="ti ti-search" style={{fontSize:16}}/> Харилцагч хайх</button>)}</Card>
+<Card><div style={{fontSize:13,fontWeight:600,color:TX,marginBottom:10}}>Захиалгын мэдээлэл</div><div style={{marginBottom:cust?10:0}}><div style={{fontSize:10,color:MU,marginBottom:4}}>Захиалга бичсэн огноо, цаг</div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><div style={{border:`0.5px solid ${BD}`,borderRadius:8,padding:'8px 10px',fontSize:12,color:TX,display:'flex',gap:6,alignItems:'center'}}><i className="ti ti-calendar" style={{fontSize:13,color:MU}}/>{orderStamp.d}</div><div style={{border:`0.5px solid ${BD}`,borderRadius:8,padding:'8px 10px',fontSize:12,color:TX,display:'flex',gap:6,alignItems:'center'}}><i className="ti ti-clock" style={{fontSize:13,color:B}}/>{orderStamp.t}</div></div></div>{cust&&<div><div style={{fontSize:10,color:MU,marginBottom:4}}>Хүргэлтийн хаяг</div><div style={{border:`0.5px solid ${BD}`,borderRadius:8,padding:'8px 10px',fontSize:12,color:TX,display:'flex',gap:6}}><i className="ti ti-map-pin" style={{fontSize:12,color:MU,flexShrink:0,marginTop:1}}/>{cust.addr}</div></div>}</Card>
+<Card><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}><div style={{fontSize:13,fontWeight:600,color:TX}}>Бараа{items.length>0&&<span style={{color:B,fontSize:12}}> ({items.length})</span>}</div><button onClick={()=>setStep('prod')} style={{background:'#eff6ff',border:`0.5px solid ${B}`,color:B,fontSize:12,cursor:'pointer',padding:'4px 10px',borderRadius:6,fontWeight:500}}>+ Бараа нэмэх</button></div>
+{items.length===0?<div style={{textAlign:'center',padding:'16px 0',color:MU,fontSize:12}}>Бараа нэмэгдээгүй байна</div>:(<>{items.map(item=>(<div key={item.pid} style={{display:'grid',gridTemplateColumns:'1fr 72px 60px 70px',gap:'3px 6px',alignItems:'center',marginBottom:8,paddingBottom:8,borderBottom:`0.5px solid ${BD}`}}><div><div style={{fontSize:12,color:TX,fontWeight:500}}>{item.name}</div><button onClick={()=>remove(item.pid)} style={{background:'none',border:'none',color:'#dc2626',fontSize:10,cursor:'pointer',padding:0}}>Устгах</button></div><div style={{display:'flex',alignItems:'center',gap:3,justifyContent:'center'}}><button onClick={()=>setQ(item.pid,-1)} style={{width:22,height:22,borderRadius:5,border:`0.5px solid ${BD}`,background:W,cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',color:TX}}>−</button><span style={{fontSize:13,fontWeight:700,minWidth:22,textAlign:'center',color:TX}}>{item.q}</span><button onClick={()=>setQ(item.pid,1)} style={{width:22,height:22,borderRadius:5,border:`0.5px solid ${B}`,background:'#eff6ff',cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',color:B}}>+</button></div><div style={{fontSize:11,color:MU,textAlign:'right'}}>{f$(item.up)}</div><div style={{fontSize:12,fontWeight:700,color:TX,textAlign:'right'}}>{f$(item.q*item.up)}</div></div>))}<div style={{display:'flex',flexDirection:'column',gap:2,marginTop:4}}><div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:MU}}><span>Дүн (НӨАТ-гүй)</span><span>{f$(sub)}</span></div><div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:MU}}><span>НӨАТ (10%)</span><span>{f$(vat)}</span></div><div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:700,color:B,marginTop:4,paddingTop:6,borderTop:`0.5px solid ${BD}`}}><span>Нийт дүн</span><span>{f$(total)}</span></div></div></>)}</Card>
+<Card><div style={{fontSize:13,fontWeight:600,color:TX,marginBottom:10}}>Төлбөрийн нөхцөл</div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>{[['cash','ti-wallet','Бэлэн төлөлт'],['transfer','ti-arrows-right-left','Шилжүүлэг']].map(([m,ic,l])=>(<button key={m} onClick={()=>setPm(m)} style={{padding:'11px 0',border:`1.5px solid ${pm===m?B:BD}`,borderRadius:9,background:pm===m?'#eff6ff':W,color:pm===m?B:MU,cursor:'pointer',fontSize:12,fontWeight:pm===m?700:400,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}><i className={`ti ${ic}`} style={{fontSize:15}}/>{l}</button>))}</div></Card>
+<Card><div style={{fontSize:10,color:MU,marginBottom:4}}>Тэмдэглэл (заавал биш)</div><textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Тэмдэглэл оруулна уу..." style={{width:'100%',border:`0.5px solid ${BD}`,borderRadius:8,padding:'8px 10px',fontSize:14,color:TX,resize:'none',outline:'none',fontFamily:'inherit',height:56,boxSizing:'border-box'}}/></Card>
+<button onClick={handleSave} disabled={!cust||items.length===0} style={{background:!cust||items.length===0?'#d1d5db':B,color:W,padding:15,borderRadius:13,border:'none',fontSize:15,fontWeight:700,cursor:!cust||items.length===0?'default':'pointer',width:'100%'}}>{isEdit?'Захиалга шинэчлэх':'Захиалга үүсгэх'}</button>
+</div><div style={{height:16}}/></div>)}
 
-        <nav id="tabs" class="tab-bar" aria-label="Үндсэн цэс"></nav>
+function ReportsScreen({orders,custs,user}){const salespersonScope=userSalesperson(user);const[sp,setSp]=useState(salespersonScope||'all');const[startDate,setStartDate]=useState('2026-05-01');const[endDate,setEndDate]=useState('2026-05-31');const[showAll,setShowAll]=useState(false);const[selectedMonth,setSelectedMonth]=useState(null);
+const orderMonth=o=>String(o.d||'').replaceAll('.','-').slice(0,7);const orderDate=o=>String(o.d||'').replaceAll('.','-');
+const allowedOrders=useMemo(()=>salespersonScope?orders.filter(o=>o.sp===salespersonScope):orders,[orders,salespersonScope]);
+const sps=salespersonScope?[salespersonScope]:['all',...new Set(orders.map(o=>o.sp))];
+const filt=useMemo(()=>allowedOrders.filter(o=>{const d=orderDate(o);return(sp==='all'||o.sp===sp)&&(!startDate||d>=startDate)&&(!endDate||d<=endDate)}),[allowedOrders,sp,startDate,endDate]);
+const activeFilt=filt.filter(o=>o.status!=='cancelled');const tot=activeFilt.reduce((a,o)=>a+calc(o.items).total,0);const paid=activeFilt.reduce((a,o)=>a+paidAmt(o),0);const unpaid=tot-paid;
+const monthReports=useMemo(()=>{const m=new Map();allowedOrders.filter(o=>o.status!=='cancelled').forEach(o=>{const key=orderMonth(o);const cur=m.get(key)||{month:key,count:0,total:0,paid:0,unpaid:0};const total=calc(o.items).total;const p=paidAmt(o);cur.count+=1;cur.total+=total;cur.paid+=p;cur.unpaid+=Math.max(0,total-p);m.set(key,cur)});return[...m.values()].sort((a,b)=>b.month.localeCompare(a.month))},[allowedOrders]);
+const visibleMonths=showAll?monthReports:monthReports.slice(0,3);
+const monthDetail=selectedMonth&&monthReports.find(m=>m.month===selectedMonth);const monthOrders=useMemo(()=>selectedMonth?allowedOrders.filter(o=>o.status!=='cancelled'&&orderMonth(o)===selectedMonth):[],[allowedOrders,selectedMonth]);
+const monthPaidPct=monthDetail&&monthDetail.total?Math.min(100,Math.round(monthDetail.paid/monthDetail.total*100)):0;const monthUnpaidPct=monthDetail&&monthDetail.total?Math.min(100-monthPaidPct,Math.round(monthDetail.unpaid/monthDetail.total*100)):0;
+const label=(startDate||'эхлэл')+'_'+(endDate||'дуусах');
+const setMonthRange=m=>{setSelectedMonth(m);setStartDate(m+'-01');const last=new Date(Number(m.slice(0,4)),Number(m.slice(5,7)),0).getDate();setEndDate(m+'-'+String(last).padStart(2,'0'))};
+const exportRows=list=>[['Захиалга #','Харилцагч','Огноо','Цаг','Борлуулагч','Төлөв','Төлбөр','Нийт дүн','Төлсөн','Үлдэгдэл','Төлбөрийн төлөв'],...list.map(o=>{const c=getC(custs,o.cid);const{total}=calc(o.items);const p=paidAmt(o);return[o.id,c.name,o.d,o.t,o.sp,ST[o.status]?.l||o.status,o.pm==='cash'?'Бэлэн':'Шилжүүлэг',total,p,Math.max(0,total-p),PS[payState(o)]?.l||'Хүлээгдэж буй']})];
+const doCSV=()=>dlCSV(exportRows(filt),'тайлан-'+label+'.csv');
+const doMonthCSV=()=>selectedMonth&&dlCSV(exportRows(monthOrders),'сарын-тайлан-'+selectedMonth+'.csv');
+return(<div><Hdr title="Тайлан" sub="Эхлэх болон дуусах огноогоор тайлангаа шүүж, татаж авах боломжтой." right={<button onClick={doCSV} style={{background:'rgba(255,255,255,.18)',color:W,border:'none',borderRadius:8,padding:'6px 12px',fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontWeight:500}}><i className="ti ti-download" style={{fontSize:14}}/> Татах</button>}/>
+<div style={{padding:'12px 12px',display:'flex',flexDirection:'column',gap:10}}>
+<Card><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}><div><div style={{fontSize:10,color:MU,marginBottom:4}}>Эхлэх огноо</div><input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)} style={{width:'100%',border:'0.5px solid '+BD,borderRadius:8,padding:'8px 10px',fontSize:12,color:TX,outline:'none',background:W,boxSizing:'border-box'}}/></div><div><div style={{fontSize:10,color:MU,marginBottom:4}}>Дуусах огноо</div><input type="date" value={endDate} onChange={e=>setEndDate(e.target.value)} style={{width:'100%',border:'0.5px solid '+BD,borderRadius:8,padding:'8px 10px',fontSize:12,color:TX,outline:'none',background:W,boxSizing:'border-box'}}/></div></div>{canSeeAllSales(user)?<div><div style={{fontSize:10,color:MU,marginBottom:4}}>Борлуулагч</div><select value={sp} onChange={e=>setSp(e.target.value)} style={{width:'100%',border:'0.5px solid '+BD,borderRadius:8,padding:'8px 10px',fontSize:12,color:TX,outline:'none',background:W}}>{sps.map(s=><option key={s} value={s}>{s==='all'?'Бүгд':s}</option>)}</select></div>:<div style={{background:'#f8fafc',border:'0.5px solid '+BD,borderRadius:9,padding:'9px 10px',fontSize:12,color:TX}}><span style={{color:MU}}>Борлуулагч:</span> <strong>{salespersonScope}</strong></div>}<div style={{fontSize:11,color:MU,marginTop:8}}>Сонгосон тайлан: <strong style={{color:TX}}>{startDate||'эхлэл'} – {endDate||'дуусах'}</strong> · {sp==='all'?'Бүх борлуулагч':sp}</div></Card>
+<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><div onClick={doCSV} style={{background:W,borderRadius:11,border:'0.5px solid '+BD,padding:'12px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:10}}><i className="ti ti-table" style={{fontSize:30,color:'#16a34a'}}/><div><div style={{fontSize:13,fontWeight:600,color:TX}}>Excel файл</div><div style={{fontSize:11,color:MU}}>{label} .csv</div></div><i className="ti ti-chevron-right" style={{fontSize:16,color:MU,marginLeft:'auto'}}/></div><div onClick={()=>window.print()} style={{background:W,borderRadius:11,border:'0.5px solid '+BD,padding:'12px 14px',cursor:'pointer',display:'flex',alignItems:'center',gap:10}}><i className="ti ti-file-text" style={{fontSize:30,color:'#dc2626'}}/><div><div style={{fontSize:13,fontWeight:600,color:TX}}>PDF / Хэвлэх</div><div style={{fontSize:11,color:MU}}>Хэвлэгч рүү</div></div><i className="ti ti-chevron-right" style={{fontSize:16,color:MU,marginLeft:'auto'}}/></div></div>
+<div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:8}}>{[{ic:'ti-wallet',bg:'#eff6ff',c:B,l:'Нийт дүн',v:f$(tot)},{ic:'ti-list',bg:'#f0fdf4',c:'#16a34a',l:'Захиалга',v:activeFilt.length},{ic:'ti-clock',bg:'#fef3c7',c:'#b45309',l:'Хүлээгдэж буй',v:f$(unpaid)},{ic:'ti-check',bg:'#ede9fe',c:'#6d28d9',l:'Төлөгдсөн',v:f$(paid)}].map(k=>(<Card key={k.l} p={12}><div style={{display:'flex',alignItems:'center',gap:6,marginBottom:5}}><div style={{width:28,height:28,borderRadius:8,background:k.bg,display:'flex',alignItems:'center',justifyContent:'center'}}><i className={'ti '+k.ic} style={{fontSize:14,color:k.c}}/></div><div style={{fontSize:10,color:MU,lineHeight:1.3}}>{k.l}</div></div><div style={{fontSize:18,fontWeight:700,color:TX}}>{k.v}</div></Card>))}</div>
+<Card p={0}><div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',borderBottom:'0.5px solid '+BD}}><div><div style={{fontSize:14,fontWeight:800,color:TX}}>Өмнөх саруудын тайлан</div><div style={{fontSize:11,color:MU,marginTop:2}}>Сараар нэгтгэсэн борлуулалт</div></div>{monthReports.length>3&&<button onClick={()=>setShowAll(v=>!v)} style={{border:'none',background:'none',color:B,fontSize:12,fontWeight:700,cursor:'pointer'}}>{showAll?'Хураах':'Бүгдийг харах'}</button>}</div>{visibleMonths.length?visibleMonths.map((m,i)=><div key={m.month} onClick={()=>setMonthRange(m.month)} style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',borderBottom:i<visibleMonths.length-1?'0.5px solid '+BD:'none',cursor:'pointer',background:selectedMonth===m.month?'#eff6ff':W}}><div style={{width:38,height:38,borderRadius:11,background:selectedMonth===m.month?B:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',color:selectedMonth===m.month?W:B}}><i className="ti ti-calendar-month" style={{fontSize:19}}/></div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:TX}}>{m.month}</div><div style={{fontSize:11,color:MU}}>{m.count} захиалга · Төлсөн {f$(m.paid)}</div></div><div style={{textAlign:'right'}}><div style={{fontSize:13,fontWeight:800,color:B}}>{f$(m.total)}</div>{m.unpaid>0&&<div style={{fontSize:11,color:'#b45309'}}>Үлдэгдэл {f$(m.unpaid)}</div>}</div></div>):<div style={{padding:24,textAlign:'center',fontSize:13,color:MU}}>Өмнөх сарын тайлан алга.</div>}</Card>
+{monthDetail&&<Card style={{border:'1px solid #bfdbfe',background:'#f8fbff'}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10,marginBottom:12}}><div><div style={{fontSize:15,fontWeight:900,color:TX}}>{monthDetail.month} сарын дэлгэрэнгүй</div><div style={{fontSize:11,color:MU,marginTop:2}}>{sp==='all'?'Бүх борлуулагч':sp} · {monthDetail.count} захиалга</div></div><button onClick={()=>setSelectedMonth(null)} style={{width:30,height:30,borderRadius:15,border:'none',background:W,color:MU,cursor:'pointer'}}><i className="ti ti-x" style={{fontSize:17}}/></button></div><div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12}}><div style={{width:88,height:88,borderRadius:44,background:'conic-gradient(#16a34a 0 '+monthPaidPct+'%, #f59e0b '+monthPaidPct+'% '+(monthPaidPct+monthUnpaidPct)+'%, #e5e7eb '+(monthPaidPct+monthUnpaidPct)+'% 100%)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><div style={{width:64,height:64,borderRadius:32,background:W,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}><div style={{fontSize:17,fontWeight:900,color:'#16a34a'}}>{monthPaidPct}%</div><div style={{fontSize:9,color:MU,fontWeight:700}}>төлсөн</div></div></div><div style={{flex:1,display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>{[{l:'Нийт дүн',v:f$(monthDetail.total),c:B,bg:'#eff6ff'},{l:'Төлсөн',v:f$(monthDetail.paid),c:'#16a34a',bg:'#ecfdf5'},{l:'Үлдэгдэл',v:f$(monthDetail.unpaid),c:'#b45309',bg:'#fffbeb'},{l:'Захиалга',v:monthDetail.count,c:TX,bg:'#f8fafc'}].map(x=><div key={x.l} style={{background:x.bg,borderRadius:10,padding:'8px 9px'}}><div style={{fontSize:10,color:MU,marginBottom:2}}>{x.l}</div><div style={{fontSize:13,fontWeight:900,color:x.c}}>{x.v}</div></div>)}</div></div><div style={{height:8,borderRadius:99,background:'#e5e7eb',overflow:'hidden',display:'flex',marginBottom:12}}><div style={{width:monthPaidPct+'%',background:'#16a34a'}}/><div style={{width:monthUnpaidPct+'%',background:'#f59e0b'}}/></div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><button onClick={doMonthCSV} style={{border:'0.5px solid #bbf7d0',background:'#ecfdf5',borderRadius:11,padding:'10px 8px',display:'flex',alignItems:'center',justifyContent:'center',gap:7,color:'#15803d',fontSize:12,fontWeight:800,cursor:'pointer'}}><i className="ti ti-table" style={{fontSize:17}}/> Excel татах</button><button onClick={()=>window.print()} style={{border:'0.5px solid #fecaca',background:'#fff1f2',borderRadius:11,padding:'10px 8px',display:'flex',alignItems:'center',justifyContent:'center',gap:7,color:'#dc2626',fontSize:12,fontWeight:800,cursor:'pointer'}}><i className="ti ti-file-text" style={{fontSize:17}}/> PDF / Хэвлэх</button></div></Card>}
+</div><div style={{height:16}}/></div>)}
+function MoreScreen({orders,products,custs,user,onNav,onLogout}){
+const manager=canManageSettings(user);
+const allQl=[{ic:'ti-package',c:'#2352DC',bg:'#eff6ff',l:'Бараа',n:products.length,nav:'products',locked:!manager},{ic:'ti-folder',c:'#16a34a',bg:'#f0fdf4',l:'Ангилал',n:3,nav:'categories',locked:!manager},{ic:'ti-users',c:'#7c3aed',bg:'#f5f3ff',l:'Хэрэглэгчид',n:INIT_USERS.length,nav:'users',locked:!manager},{ic:'ti-building',c:'#ea580c',bg:'#fff7ed',l:'Харилцагчид',n:custs.length,nav:'customers'},{ic:'ti-file',c:'#d97706',bg:'#fffbeb',l:'Нэхэмжлэл',n:orders.filter(o=>o.status==='delivered').length,nav:'invoices'},{ic:'ti-percentage',c:'#059669',bg:'#ecfdf5',l:'Татвар',n:'10%',nav:'tax',locked:!manager}];
+const ql=manager?allQl:allQl.filter(q=>!q.locked);
+const sets=(manager?[{ic:'ti-building',l:'Компаний мэдээлэл',s:'Компаний нэр, хаяг, утас, регистр',nav:'company'},{ic:'ti-users',l:'Хэрэглэгчид',s:'Хэрэглэгч нэмэх, эрх удирдах',nav:'users'},{ic:'ti-shield',l:'Эрх, роль',s:'Роль үүсгэх, эрхийн тохиргоо',nav:'users'},{ic:'ti-package',l:'Барааны тохиргоо',s:'Ангилал, нэгж, барааны шинж',nav:'products'},{ic:'ti-cloud',l:'Өгөгдлийн нөөцлөлт',s:'Өгөгдөл нөөцлөх, сэргээх',nav:'backup'}]:[{ic:'ti-lock',l:'Тохиргоо түгжээтэй',s:'Бараа, эрх роль, компанийн тохиргоог нягтлан өөрчилнө',nav:'products'}]).concat([{ic:'ti-lock',l:'Аюулгүй байдал',s:'Нууц үг, 2 шатлалт баталгаажуулалт',nav:'security'}]);
+return(<div><Hdr title="Бусад" sub={manager?'Компанийн тохиргоо, хэрэглэгч, бараа, ангилал':'Харилцагч, нэхэмжлэл болон хувийн тохиргоо'} right={manager?<button onClick={()=>onNav('company')} style={{background:'rgba(255,255,255,.18)',color:W,border:'none',borderRadius:8,padding:'6px 12px',fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontWeight:500}}><i className="ti ti-settings" style={{fontSize:14}}/> Тохиргоо</button>:null}/>
+<div style={{padding:'12px 12px',display:'flex',flexDirection:'column',gap:10}}>
+<Card><div style={{fontSize:13,fontWeight:600,color:TX,marginBottom:10}}>Түргэн хандалт</div><div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}}>{ql.map(q=>(<div key={q.l} onClick={()=>onNav(q.nav)} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:5,cursor:'pointer',padding:'8px 4px',borderRadius:10}}><div style={{width:50,height:50,borderRadius:14,background:q.bg,display:'flex',alignItems:'center',justifyContent:'center'}}><i className={`ti ${q.ic}`} style={{fontSize:24,color:q.c}}/></div><div style={{fontSize:10,color:TX,textAlign:'center',fontWeight:600}}>{q.l}</div></div>))}</div></Card>
+<Card><div style={{fontSize:13,fontWeight:600,color:TX,marginBottom:10}}>Товч мэдээлэл</div><div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:6}}>{ql.slice(0,4).map(q=>(<div key={q.l} onClick={()=>onNav(q.nav)} style={{textAlign:'center',padding:'8px 4px',borderRadius:10,border:`0.5px solid ${BD}`,cursor:'pointer'}}><div style={{width:28,height:28,borderRadius:8,background:q.bg,display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 4px'}}><i className={`ti ${q.ic}`} style={{fontSize:14,color:q.c}}/></div><div style={{fontSize:16,fontWeight:700,color:TX}}>{q.n}</div><div style={{fontSize:9,color:MU}}>нийт</div></div>))}</div></Card>
+<Card p="14px 14px 4px"><div style={{fontSize:13,fontWeight:600,color:TX,marginBottom:10}}>Еренхий тохиргоо</div>{sets.map((s,i)=>(<div key={s.l} onClick={()=>onNav(s.nav)} style={{display:'flex',alignItems:'center',gap:12,paddingBottom:12,marginBottom:i<sets.length-1?12:0,borderBottom:i<sets.length-1?`0.5px solid ${BD}`:'none',cursor:'pointer'}}><div style={{width:36,height:36,borderRadius:10,background:BG,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><i className={`ti ${s.ic}`} style={{fontSize:18,color:B}}/></div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,color:TX}}>{s.l}</div><div style={{fontSize:11,color:MU}}>{s.s}</div></div><i className="ti ti-chevron-right" style={{fontSize:16,color:MU,flexShrink:0}}/></div>))}</Card>
+<div onClick={onLogout} style={{background:W,borderRadius:12,border:`0.5px solid ${BD}`,padding:'12px 14px',display:'flex',alignItems:'center',gap:12,cursor:'pointer'}}><i className="ti ti-logout" style={{fontSize:20,color:'#dc2626'}}/><span style={{fontSize:13,color:'#dc2626',fontWeight:600}}>Системээс гарах</span><i className="ti ti-chevron-right" style={{fontSize:16,color:'#dc2626',marginLeft:'auto'}}/></div>
+</div><div style={{height:16}}/></div>)}
 
-        <section id="view"></section>
-      </section>
+function ProductsScreen({products,setProducts,back}){const[showAdd,setShowAdd]=useState(false);const[f,setF]=useState({name:'',sku:'',price:'',cat:'Цаас'});
+const add=()=>{if(!f.name||!f.sku)return;const id=Math.max(0,...products.map(p=>p.id))+1;setProducts(p=>[...p,{id,sku:f.sku,name:f.name,price:Number(f.price)||0,cat:f.cat}]);setF({name:'',sku:'',price:'',cat:'Цаас'});setShowAdd(false)};
+const del=id=>setProducts(p=>p.filter(x=>x.id!==id));
+const grouped=CATS.reduce((a,c)=>{a[c]=products.filter(p=>p.cat===c);return a},{});
+return(<div><Hdr title="Бараа" sub={`${products.length} нийт бараа`} back={back} right={<button onClick={()=>setShowAdd(s=>!s)} style={{background:'rgba(255,255,255,.18)',color:W,border:'none',borderRadius:8,padding:'6px 12px',fontSize:12,cursor:'pointer',fontWeight:500}}>+ Нэмэх</button>}/>
+<div style={{padding:'12px 12px',display:'flex',flexDirection:'column',gap:10}}>
+{showAdd&&<Card style={{border:`1.5px solid ${B}`}}><div style={{fontSize:13,fontWeight:600,color:TX,marginBottom:10}}>Шинэ бараа нэмэх</div><div style={{display:'flex',flexDirection:'column',gap:8}}><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><Input label="Нэр *" value={f.name} onChange={v=>setF(x=>({...x,name:v}))}/><Input label="SKU *" value={f.sku} onChange={v=>setF(x=>({...x,sku:v}))}/></div><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><Input label="Үнэ (₮)" value={f.price} onChange={v=>setF(x=>({...x,price:v}))}/><Sel label="Ангилал" value={f.cat} onChange={v=>setF(x=>({...x,cat:v}))} options={CATS}/></div><div style={{display:'flex',gap:8}}><Btn outline color={MU} onClick={()=>setShowAdd(false)} small>Болих</Btn><Btn color={B} onClick={add} small>Нэмэх</Btn></div></div></Card>}
+{CATS.map(cat=>{const ps=grouped[cat];if(!ps.length)return null;return(<div key={cat}><div style={{fontSize:12,fontWeight:600,color:MU,marginBottom:6}}>{cat} ({ps.length})</div><Card p={0}>{ps.map((p,i)=>(<div key={p.id} style={{padding:'10px 14px',borderBottom:i<ps.length-1?`0.5px solid ${BD}`:'none',display:'flex',alignItems:'center',gap:12}}><div style={{width:34,height:34,borderRadius:8,background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><i className="ti ti-package" style={{fontSize:16,color:B}}/></div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,color:TX}}>{p.name}</div><div style={{fontSize:10,color:MU}}>SKU: {p.sku}</div></div><div style={{fontSize:13,fontWeight:700,color:B,marginRight:8}}>{f$(p.price)}</div><button onClick={()=>del(p.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#dc2626',padding:4}}><i className="ti ti-trash" style={{fontSize:14}}/></button></div>))}</Card></div>)})}
+</div><div style={{height:16}}/></div>)}
 
-      <section id="user-menu" class="user-menu hidden" aria-label="Хэрэглэгчийн цэс">
-        <div class="menu-panel">
-          <div class="menu-head">
-            <div>
-              <p class="eyebrow">Миний цэс</p>
-              <h3 id="menu-title">Профайл</h3>
-            </div>
-            <button id="close-menu" class="mini-action" type="button" aria-label="Хаах">×</button>
-          </div>
-          <div class="menu-actions">
-            <button type="button" data-menu-view="profile">Профайл</button>
-            <button type="button" data-menu-view="employees">Ажилчид</button>
-            <button type="button" data-menu-view="products">Бараа</button>
-            <button type="button" data-menu-view="plans">Төлөвлөгөө</button>
-          </div>
-          <div id="menu-content"></div>
-          <button id="menu-logout" class="danger-action" type="button">Гарах</button>
-        </div>
-      </section>
+function CustomersScreen({custs,setCusts,back}){const[showAdd,setShowAdd]=useState(false);const[f,setF]=useState({name:'',reg:'',ph:'',addr:''});
+const add=()=>{if(!f.name)return;const id=Math.max(0,...custs.map(c=>c.id))+1;setCusts(p=>[...p,{id,...f}]);setF({name:'',reg:'',ph:'',addr:''});setShowAdd(false)};
+return(<div><Hdr title="Харилцагчид" sub={`${custs.length} нийт харилцагч`} back={back} right={<button onClick={()=>setShowAdd(s=>!s)} style={{background:'rgba(255,255,255,.18)',color:W,border:'none',borderRadius:8,padding:'6px 12px',fontSize:12,cursor:'pointer',fontWeight:500}}>+ Нэмэх</button>}/>
+<div style={{padding:'12px 12px',display:'flex',flexDirection:'column',gap:10}}>
+{showAdd&&<Card style={{border:`1.5px solid ${B}`}}><div style={{fontSize:13,fontWeight:600,color:TX,marginBottom:10}}>Шинэ харилцагч нэмэх</div><div style={{display:'flex',flexDirection:'column',gap:8}}><Input label="Нэр *" value={f.name} onChange={v=>setF(x=>({...x,name:v}))}/><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><Input label="РД" value={f.reg} onChange={v=>setF(x=>({...x,reg:v}))}/><Input label="Утас" value={f.ph} onChange={v=>setF(x=>({...x,ph:v}))}/></div><Input label="Хаяг" value={f.addr} onChange={v=>setF(x=>({...x,addr:v}))}/><div style={{display:'flex',gap:8}}><Btn outline color={MU} onClick={()=>setShowAdd(false)} small>Болих</Btn><Btn color={B} onClick={add} small>Нэмэх</Btn></div></div></Card>}
+<Card p={0}>{custs.map((c,i)=>(<div key={c.id} style={{padding:'12px 14px',borderBottom:i<custs.length-1?`0.5px solid ${BD}`:'none',display:'flex',alignItems:'center',gap:12}}><div style={{width:38,height:38,borderRadius:19,background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><i className="ti ti-building" style={{fontSize:18,color:B}}/></div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:TX}}>{c.name}</div><div style={{fontSize:11,color:MU}}>РД: {c.reg||'—'} · {c.ph||'—'}</div><div style={{fontSize:11,color:MU}}>{c.addr||''}</div></div></div>))}</Card>
+</div><div style={{height:16}}/></div>)}
 
-      <section id="lock-screen" class="lock-screen hidden" aria-label="Түгжээтэй">
-        <form id="unlock-form" class="lock-panel">
-          <img src="./assets/batmon-icon.png" alt="Batmon" class="brand-mark large" />
-          <p class="eyebrow">15 минут идэвхгүй</p>
-          <h2><span id="unlock-user">Хэрэглэгч</span></h2>
-          <label>
-            Код
-            <input id="unlock-code" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Кодоо оруулна уу" />
-          </label>
-          <button class="primary-action" type="submit">Нээх</button>
-        </form>
-      </section>
-    </main>
+function UsersScreen({back}){const[users,setUsers]=useState(INIT_USERS);const[showAdd,setShowAdd]=useState(false);const[f,setF]=useState({name:'',email:'',role:'salesperson'});
+const add=()=>{if(!f.name||!f.email)return;setUsers(p=>[...p,{id:p.length+1,...f}]);setF({name:'',email:'',role:'salesperson'});setShowAdd(false)};
+return(<div><Hdr title="Хэрэглэгчид" sub={`${users.length} хэрэглэгч`} back={back} right={<button onClick={()=>setShowAdd(s=>!s)} style={{background:'rgba(255,255,255,.18)',color:W,border:'none',borderRadius:8,padding:'6px 12px',fontSize:12,cursor:'pointer',fontWeight:500}}>+ Нэмэх</button>}/>
+<div style={{padding:'12px 12px',display:'flex',flexDirection:'column',gap:10}}>
+{showAdd&&<Card style={{border:`1.5px solid ${B}`}}><div style={{fontSize:13,fontWeight:600,color:TX,marginBottom:10}}>Шинэ хэрэглэгч</div><div style={{display:'flex',flexDirection:'column',gap:8}}><Input label="Нэр *" value={f.name} onChange={v=>setF(x=>({...x,name:v}))}/><Input label="Имэйл *" value={f.email} onChange={v=>setF(x=>({...x,email:v}))}/><Sel label="Эрх" value={f.role} onChange={v=>setF(x=>({...x,role:v}))} options={[{v:'admin',l:'Админ'},{v:'salesperson',l:'Борлуулагч'},{v:'accountant',l:'Нягтлан'}]}/><div style={{display:'flex',gap:8}}><Btn outline color={MU} onClick={()=>setShowAdd(false)} small>Болих</Btn><Btn color={B} onClick={add} small>Нэмэх</Btn></div></div></Card>}
+<Card p={0}>{users.map((u,i)=>(<div key={u.id} style={{padding:'12px 14px',borderBottom:i<users.length-1?`0.5px solid ${BD}`:'none',display:'flex',alignItems:'center',gap:12}}><div style={{width:38,height:38,borderRadius:19,background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><i className="ti ti-user" style={{fontSize:18,color:B}}/></div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:TX}}>{u.name}</div><div style={{fontSize:11,color:MU}}>{u.email}</div></div><span style={{background:u.role==='admin'?'#ede9fe':u.role==='accountant'?'#e0f2fe':'#dcfce7',color:u.role==='admin'?'#6d28d9':u.role==='accountant'?'#0369a1':'#15803d',fontSize:10,padding:'2px 8px',borderRadius:99,fontWeight:600}}>{roleLabel(u.role)}</span></div>))}</Card>
+</div><div style={{height:16}}/></div>)}
 
-    <template id="sales-view">
-      <div id="sales-dashboard"></div>
-      <section class="tool-panel archive-panel">
-        <div class="section-heading">
-          <h3>Төлөгдсөн захиалгын архив</h3>
-          <span>Өдөр / нэр</span>
-        </div>
-        <div class="filter-card archive-filters">
-          <label>
-            Өдөр
-            <input id="archive-date-filter" type="date" />
-          </label>
-          <label>
-            Нэрээр хайх
-            <input id="archive-name-filter" placeholder="Дэлгүүр эсвэл борлуулагч" />
-          </label>
-        </div>
-        <div id="paid-archive-list" class="list-stack"></div>
-      </section>
-    </template>
+function CategoriesScreen({back}){const[cats,setCats]=useState([...CATS]);const[newCat,setNewCat]=useState('');
+return(<div><Hdr title="Ангилал" sub={`${cats.length} ангилал`} back={back}/>
+<div style={{padding:'12px 12px'}}><Card style={{marginBottom:10}}><div style={{display:'flex',gap:8,alignItems:'center'}}><input className="input-sm" value={newCat} onChange={e=>setNewCat(e.target.value)} placeholder="Шинэ ангилал нэмэх..." style={{flex:1}}/><button onClick={()=>{if(newCat.trim()){setCats(c=>[...c,newCat.trim()]);setNewCat('')}}} style={{background:B,color:W,border:'none',borderRadius:8,padding:'8px 14px',cursor:'pointer',fontSize:13,fontWeight:600,whiteSpace:'nowrap'}}>+ Нэмэх</button></div></Card>
+<Card p={0}>{cats.map((c,i)=>(<div key={c} style={{padding:'12px 14px',borderBottom:i<cats.length-1?`0.5px solid ${BD}`:'none',display:'flex',alignItems:'center',gap:12}}><div style={{width:32,height:32,borderRadius:8,background:'#eff6ff',display:'flex',alignItems:'center',justifyContent:'center'}}><i className="ti ti-folder" style={{fontSize:16,color:B}}/></div><div style={{flex:1,fontSize:13,fontWeight:500,color:TX}}>{c}</div><button onClick={()=>setCats(p=>p.filter(x=>x!==c))} style={{background:'none',border:'none',cursor:'pointer',color:'#dc2626',padding:4}}><i className="ti ti-trash" style={{fontSize:14}}/></button></div>))}</Card></div></div>)}
 
-    <template id="order-view">
-      <div id="accountant-order-tools"></div>
-      <div id="sales-dashboard"></div>
-      <form id="order-form" class="tool-panel">
-        <div class="section-heading">
-          <h3>Захиалга</h3>
-          <span>Олон бараа</span>
-        </div>
-        <div id="accountant-order-owner"></div>
-        <label>
-          Харилцагч
-          <input id="customer" placeholder="Дэлгүүр / байгууллага" required />
-        </label>
-        <div class="order-builder">
-          <label>
-            Бараа сонгох
-            <select id="product"></select>
-          </label>
-          <div class="field-grid">
-            <label>
-              Тоо ширхэг
-              <input id="quantity" type="number" min="1" value="1" />
-            </label>
-            <label>
-              Нэгж үнэ
-              <input id="price" type="number" min="0" value="25000" />
-            </label>
-          </div>
-          <button id="add-item" class="secondary-action" type="button">Бараа нэмэх</button>
-        </div>
-        <div id="draft-items" class="draft-items"></div>
-        <div class="payment-mode" role="group" aria-label="Төлбөрийн хэлбэр">
-          <button type="button" class="mode-option active" data-payment="bank">Дансаар</button>
-          <button type="button" class="mode-option" data-payment="cash">Бэлнээр</button>
-        </div>
-        <label>
-          Мөнгө хүлээн авсан дүн
-          <input id="paid" type="number" min="0" value="25000" />
-        </label>
-        <button class="primary-action" type="submit">Захиалга хадгалах</button>
-      </form>
-      <div id="order-list" class="list-stack"></div>
-    </template>
+function InvoicesScreen({orders,custs,back}){const invs=orders.filter(o=>o.status==='delivered').map(o=>({...o,inv:`INV-${o.id.replace('Z-','')}`}));
+return(<div><Hdr title="Нэхэмжлэл" sub={`${invs.length} нэхэмжлэл`} back={back}/>
+<div style={{padding:'12px 12px'}}><Card p={0}>{invs.length===0?<div style={{padding:32,textAlign:'center',color:MU}}>Нэхэмжлэл байхгүй байна</div>:invs.map((o,i)=>{const c=getC(custs,o.cid);const{total}=calc(o.items);return(<div key={o.id} style={{padding:'12px 14px',borderBottom:i<invs.length-1?`0.5px solid ${BD}`:'none',display:'flex',alignItems:'center',gap:12}}><div style={{width:38,height:38,borderRadius:8,background:'#dcfce7',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><i className="ti ti-file-check" style={{fontSize:18,color:'#15803d'}}/></div><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:TX}}>{o.inv}</div><div style={{fontSize:12,color:MU}}>{c.name} · {o.d}</div></div><div style={{textAlign:'right'}}><div style={{fontSize:13,fontWeight:700,color:'#15803d'}}>{f$(total)}</div><span style={{fontSize:10,background:'#dcfce7',color:'#15803d',padding:'1px 6px',borderRadius:99,fontWeight:600}}>Төлөгдсөн</span></div></div>)})}</Card></div></div>)}
 
-    <template id="accounting-view">
-      <div class="tool-panel">
-        <div class="section-heading">
-          <h3>Тайлан</h3>
-          <span>Өдөр / сар</span>
-        </div>
-        <div id="accounting-stats" class="metric-strip"></div>
-        <div id="income-report-tools"></div>
-        <button id="download-income-report" class="primary-action report-action" type="button">Орлогын тайлан татах</button>
-      </div>
-      <section id="income-panel" class="tool-panel"></section>
-      <section id="top-products-panel" class="tool-panel"></section>
-      <section id="sales-index-panel" class="tool-panel"></section>
-      <div id="accounting-list" class="list-stack"></div>
-    </template>
+function CompanyScreen({back}){const[f,setF]=useState({name:'Таван богд ХХК',reg:'1234567',phone:'7700 1111',addr:'УБ, СБД, 5-р хороо',tz:'Asia/Ulaanbaatar',currency:'MNT'});const[saved,setSaved]=useState(false);const save=()=>{setSaved(true);setTimeout(()=>setSaved(false),2000)};
+return(<div><Hdr title="Компаний мэдээлэл" back={back} right={<button onClick={save} style={{background:'rgba(255,255,255,.18)',color:W,border:'none',borderRadius:8,padding:'6px 12px',fontSize:12,cursor:'pointer',fontWeight:500}}>{saved?'✓ Хадгалагдлаа':'Хадгалах'}</button>}/>
+<div style={{padding:'12px 12px',display:'flex',flexDirection:'column',gap:10}}>
+<Card><div style={{fontSize:13,fontWeight:600,color:TX,marginBottom:10}}>Үндсэн мэдээлэл</div><div style={{display:'flex',flexDirection:'column',gap:10}}><Input label="Компаний нэр" value={f.name} onChange={v=>setF(x=>({...x,name:v}))}/><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><Input label="Регистрийн дугаар" value={f.reg} onChange={v=>setF(x=>({...x,reg:v}))}/><Input label="Утас" value={f.phone} onChange={v=>setF(x=>({...x,phone:v}))}/></div><Input label="Хаяг" value={f.addr} onChange={v=>setF(x=>({...x,addr:v}))}/><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><Sel label="Цагийн бүс" value={f.tz} onChange={v=>setF(x=>({...x,tz:v}))} options={['Asia/Ulaanbaatar','Asia/Shanghai','Europe/London']}/><Sel label="Валют" value={f.currency} onChange={v=>setF(x=>({...x,currency:v}))} options={['MNT','USD','CNY']}/></div></div></Card>
+<button onClick={save} style={{background:B,color:W,border:'none',borderRadius:13,padding:14,fontSize:15,fontWeight:700,cursor:'pointer',width:'100%'}}>{saved?'✓ Хадгалагдлаа!':'Мэдээлэл хадгалах'}</button>
+</div><div style={{height:16}}/></div>)}
 
-<script src="./app.js"></script>
-  </body>
+function SecurityScreen({back}){const[f,setF]=useState({cur:'',nw:'',cf:''});const[msg,setMsg]=useState('');
+const save=()=>{if(!f.cur||!f.nw||!f.cf){setMsg('Бүх талбарыг бөглөнө уу');return}if(f.nw!==f.cf){setMsg('Шинэ нууц үг таарахгүй байна');return}setMsg('✓ Нууц үг амжилттай солигдлоо');setF({cur:'',nw:'',cf:''})};
+return(<div><Hdr title="Аюулгүй байдал" back={back}/>
+<div style={{padding:'12px 12px',display:'flex',flexDirection:'column',gap:10}}>
+<Card><div style={{fontSize:13,fontWeight:600,color:TX,marginBottom:10}}>Нууц үг солих</div><div style={{display:'flex',flexDirection:'column',gap:8}}><Input label="Одоогийн нууц үг" value={f.cur} onChange={v=>setF(x=>({...x,cur:v}))}/><Input label="Шинэ нууц үг" value={f.nw} onChange={v=>setF(x=>({...x,nw:v}))}/><Input label="Шинэ нууц үг давтах" value={f.cf} onChange={v=>setF(x=>({...x,cf:v}))}/>{msg&&<div style={{color:msg.startsWith('✓')?'#15803d':'#dc2626',fontSize:12,fontWeight:500}}>{msg}</div>}<Btn color={B} onClick={save}>Нууц үг солих</Btn></div></Card>
+</div><div style={{height:16}}/></div>)}
+
+function BackupScreen({back}){const[loading,setLoading]=useState(false);const[done,setDone]=useState(false);const doBackup=()=>{setLoading(true);setTimeout(()=>{setLoading(false);setDone(true)},1500)};
+return(<div><Hdr title="Өгөгдлийн нөөцлөлт" back={back}/>
+<div style={{padding:'12px 12px',display:'flex',flexDirection:'column',gap:10}}>
+<Card><div style={{fontSize:13,fontWeight:600,color:TX,marginBottom:6}}>Сүүлийн нөөцлөлт</div><div style={{fontSize:12,color:'#15803d',marginBottom:12}}>✓ 2026.05.21 03:00 — амжилттай</div><button onClick={doBackup} disabled={loading} style={{background:loading?'#d1d5db':B,color:W,border:'none',borderRadius:11,padding:'12px',fontSize:13,fontWeight:600,cursor:loading?'default':'pointer',width:'100%'}}>{loading?'Нөөцлөж байна...':done?'✓ Нөөцлөлт амжилттай':'Одоо нөөцлөх'}</button></Card>
+</div><div style={{height:16}}/></div>)}
+
+function TaxScreen({back}){return(<div><Hdr title="Татвар, хөнгөлөлт" back={back}/><div style={{padding:'12px 12px'}}><Card><div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}><div><div style={{fontSize:13,fontWeight:600}}>НӨАТ хувь</div><div style={{fontSize:11,color:MU}}>Нэмэгдсэн өртгийн татвар</div></div><div style={{background:'#eff6ff',color:B,padding:'4px 14px',borderRadius:99,fontWeight:700,fontSize:18}}>10%</div></div></Card></div></div>)}
+
+function App(){
+const[user,setUser]=useState(null);const loggedIn=!!user;const[tab,setTab]=useState('home');
+const[orders,setOrders]=useState(INIT_ORDERS);const[products,setProducts]=useState(INIT_PRODS);const[custs,setCusts]=useState(INIT_CUSTS);
+const[view,setView]=useState(null);const[toast,setToast]=useState(null);
+const scopeSp=userSalesperson(user);const visibleOrders=scopeSp?orders.filter(o=>o.sp===scopeSp):orders;
+const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(null),2500)};
+const addOrder=o=>{setOrders(p=>[o,...p]);setView(null);setTab('orders');showToast('✓ Захиалга амжилттай үүслээ!')};
+const updateOrder=o=>{setOrders(p=>p.map(x=>x.id===o.id?o:x));setView(null);showToast('✓ Захиалга шинэчлэгдлээ!')};
+const updStatus=(id,status,cancelReason='')=>{setOrders(p=>p.map(o=>o.id===id?{...o,status,cancelReason:status==='cancelled'?cancelReason:o.cancelReason}:o));setView(v=>v&&v.type==='detail'&&v.o.id===id?{...v,o:{...v.o,status,cancelReason:status==='cancelled'?cancelReason:v.o.cancelReason}}:v)};
+const updPayment=(id,amount)=>{setOrders(p=>p.map(o=>{if(o.id!==id)return o;const total=calc(o.items).total;const paid=Math.max(0,Math.min(total,paidAmt(o)+(Number(amount)||0)));return{...o,paid,ps:paid>=total?'paid':'pending'}}));setView(v=>v&&v.type==='detail'&&v.o.id===id?(()=>{const total=calc(v.o.items).total;const paid=Math.max(0,Math.min(total,paidAmt(v.o)+(Number(amount)||0)));return{...v,o:{...v.o,paid,ps:paid>=total?'paid':'pending'}}})():v);showToast('✓ Төлбөр шинэчлэгдлээ')};
+const copyOrder=o=>{const{d,t}=today();const newO={...o,id:genId(),status:'new',ps:'pending',paid:0,d,t};setOrders(p=>[newO,...p]);setView({type:'detail',o:newO});showToast('✓ Захиалга хуулагдлаа!')};
+const navFns={products:()=>canManageSettings(user)?setView({type:'products'}):showToast('Энэ тохиргоо нягтлангийн эрхтэй.'),customers:()=>setView({type:'customers'}),categories:()=>canManageSettings(user)?setView({type:'categories'}):showToast('Ангилал өөрчлөх эрхгүй.'),users:()=>canManageSettings(user)?setView({type:'users'}):showToast('Эрх, роль өөрчлөх эрхгүй.'),invoices:()=>setView({type:'invoices'}),company:()=>canManageSettings(user)?setView({type:'company'}):showToast('Компанийн мэдээлэл өөрчлөх эрхгүй.'),tax:()=>canManageSettings(user)?setView({type:'tax'}):showToast('Татварын тохиргоо өөрчлөх эрхгүй.'),security:()=>setView({type:'security'}),backup:()=>canManageSettings(user)?setView({type:'backup'}):showToast('Нөөцлөлт хийх эрхгүй.')};
+const back=()=>setView(null);const vt=view?.type;
+const W2={maxWidth:430,margin:'0 auto',background:BG,fontFamily:"-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif",minHeight:'100vh'};
+if(!loggedIn)return <div style={W2}><LoginScreen onLogin={setUser}/></div>;
+return(<div style={W2}>
+{toast&&<div style={{background:'#15803d',color:'#fff',padding:'11px 20px',textAlign:'center',fontSize:13,fontWeight:600}}>{toast}</div>}
+{vt==='new'?<NewOrderScreen onSave={addOrder} back={back} products={products} custs={custs} user={user}/>:
+ vt==='edit'?<NewOrderScreen onSave={addOrder} onUpdate={updateOrder} back={back} products={products} custs={custs} editOrder={view.o} user={user}/>:
+ vt==='detail'?<OrderDetail order={view.o} custs={custs} back={back} onUpdateStatus={updStatus} onUpdatePayment={updPayment} onEdit={o=>setView({type:'edit',o})} onCopy={copyOrder}/>:
+ vt==='products'?<ProductsScreen products={products} setProducts={setProducts} back={back}/>:
+ vt==='customers'?<CustomersScreen custs={custs} setCusts={setCusts} back={back}/>:
+ vt==='categories'?<CategoriesScreen back={back}/>:
+ vt==='users'?<UsersScreen back={back}/>:
+ vt==='invoices'?<InvoicesScreen orders={visibleOrders} custs={custs} back={back}/>:
+ vt==='company'?<CompanyScreen back={back}/>:
+ vt==='tax'?<TaxScreen back={back}/>:
+ vt==='security'?<SecurityScreen back={back}/>:
+ vt==='backup'?<BackupScreen back={back}/>:
+ (<>
+  {tab==='home'&&<HomeScreen orders={orders} custs={custs} user={user} onDetail={o=>setView({type:'detail',o})} onViewAll={()=>setTab('orders')}/>}
+  {tab==='reports'&&<ReportsScreen orders={orders} custs={custs} user={user}/>}
+  {tab==='orders'&&<OrdersScreen orders={visibleOrders} custs={custs} onDetail={o=>setView({type:'detail',o})} onNew={()=>setView({type:'new'})}/>}
+  {tab==='more'&&<MoreScreen orders={visibleOrders} products={products} custs={custs} user={user} onNav={k=>navFns[k]&&navFns[k]()} onLogout={()=>{setUser(null);setTab('home');setView(null)}}/>}
+  <Nav tab={tab} set={setTab} onNew={()=>setView({type:'new'})}/>
+ </>)}
+</div>)}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
 </html>
