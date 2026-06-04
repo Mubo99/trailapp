@@ -22,6 +22,14 @@ async function supabase(path, key, init = {}) {
   return data;
 }
 
+function cleanEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function validEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 async function authedUser(token) {
   const res = await fetch(SUPABASE_URL + "/auth/v1/user", {
     headers: { apikey: ANON_KEY, Authorization: `Bearer ${token}` },
@@ -57,8 +65,10 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: "Admin эрх шаардлагатай" });
     }
 
-    const { email, password, name, role } = req.body || {};
+    const { password, name, role } = req.body || {};
+    const email = cleanEmail(req.body?.email);
     if (!email || !password) return res.status(400).json({ error: "Имэйл болон passcode шаардлагатай" });
+    if (!validEmail(email)) return res.status(400).json({ error: "Зөв email оруулна уу. Жишээ: name@gmail.com" });
 
     const existing = await findAuthUser(email);
     if (existing) {
@@ -84,6 +94,10 @@ export default async function handler(req, res) {
     });
     return res.status(200).json({ ok: true, created: true });
   } catch (error) {
-    return res.status(500).json({ error: error.message || "Auth user үүсгэхэд алдаа гарлаа" });
+    const message = error.message || "Auth user үүсгэхэд алдаа гарлаа";
+    if (/validate email|invalid email|email address/i.test(message)) {
+      return res.status(400).json({ error: "Email хаяг буруу байна. Gmail/company email шиг бодит email ашиглана уу." });
+    }
+    return res.status(500).json({ error: message });
   }
 }
