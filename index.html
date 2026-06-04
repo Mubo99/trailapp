@@ -307,15 +307,16 @@ const[user,setUser]=useState(null);const loggedIn=!!user;const[tab,setTab]=useSt
 const[orders,setOrders]=useState(INIT_ORDERS);const[products,setProducts]=useState(INIT_PRODS);const[custs,setCusts]=useState(INIT_CUSTS);const[categories,setCategories]=useState(CATS);
 const[users,setUsers]=useState(INIT_USERS);
 const[view,setView]=useState(null);const[toast,setToast]=useState(null);const[pull,setPull]=useState({start:null,y:0,refreshing:false});
-const[dbReady,setDbReady]=useState(false);const clientId=useRef(Math.random().toString(36).slice(2));const applyingRemote=useRef(false);const saveTimer=useRef(null);const pendingSave=useRef(Promise.resolve());
+const[dbReady,setDbReady]=useState(false);const clientId=useRef(Math.random().toString(36).slice(2));const applyingRemote=useRef(false);const saveTimer=useRef(null);const pendingSave=useRef(Promise.resolve());const localEditUntil=useRef(0);
 const scopeSp=userSalesperson(user);const visibleOrders=scopeSp?orders.filter(o=>o.sp===scopeSp):orders;
 const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(null),2500)};
-const applyData=data=>{const nextUsers=(data.users||INIT_USERS).map(normalizeUser);applyingRemote.current=true;setOrders(data.orders||INIT_ORDERS);setProducts(data.products||INIT_PRODS);setCusts(data.custs||INIT_CUSTS);setCategories(Array.isArray(data.categories)?data.categories:CATS);setUsers(nextUsers);setUser(u=>u?nextUsers.find(x=>x.id===u.id)||u:u);setView(v=>v&&v.o&&data.orders?{...v,o:data.orders.find(o=>o.id===v.o.id)||v.o}:v);setTimeout(()=>{applyingRemote.current=false},0)};
+const applyData=data=>{if(Date.now()<localEditUntil.current)return;const nextUsers=(data.users||INIT_USERS).map(normalizeUser);applyingRemote.current=true;setOrders(data.orders||INIT_ORDERS);setProducts(data.products||INIT_PRODS);setCusts(data.custs||INIT_CUSTS);setCategories(Array.isArray(data.categories)?data.categories:CATS);setUsers(nextUsers);setUser(u=>u?nextUsers.find(x=>x.id===u.id)||u:u);setView(v=>v&&v.o&&data.orders?{...v,o:data.orders.find(o=>o.id===v.o.id)||v.o}:v);setTimeout(()=>{applyingRemote.current=false},0)};
 const serializeUsers=()=>users.map(u=>{const clean={...u};if(requireSupabaseAuth())delete clean.passcode;return clean});
 const getData=()=>({orders,products,custs,categories,users:serializeUsers()});
 const getSupabase=getSupabaseClient;
 const saveDataNow=async data=>{const sb=getSupabase();if(sb){const{error}=await sb.from('app_state').upsert({id:'main',data,updated_at:new Date().toISOString()});if(error)throw error;return}const r=await fetch('/api/db',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({source:clientId.current,data})});if(!r.ok)throw new Error('save failed')};
 const queueSaveData=data=>{const job=saveDataNow(data);pendingSave.current=job.catch(()=>{});return job};
+const markLocalEdit=()=>{localEditUntil.current=Date.now()+1500};
 const refreshData=async()=>{if(pull.refreshing)return;setPull({start:null,y:56,refreshing:true});try{await pendingSave.current;const sb=getSupabase();if(sb){const{data,error}=await sb.from('app_state').select('data').eq('id','main').maybeSingle();if(error)throw error;if(data?.data)applyData(data.data)}else{const r=await fetch('/api/db?ts='+Date.now());if(!r.ok)throw new Error('refresh failed');const data=await r.json();if(data&&!data.empty)applyData(data)}showToast('✓ Дата шинэчлэгдлээ')}catch(_){showToast('Дата шинэчлэхэд алдаа гарлаа')}finally{setTimeout(()=>setPull({start:null,y:0,refreshing:false}),320)}};
 const atTop=()=>((window.scrollY||document.documentElement.scrollTop||0)<=0);
 const touchStart=e=>{if(!loggedIn||pull.refreshing)return;if(atTop())setPull(p=>({...p,start:e.touches[0].clientY,y:0}))};
@@ -330,6 +331,7 @@ const updStatus=(id,status,cancelReason='')=>{setOrders(p=>p.map(o=>o.id===id?{.
 const updPayment=(id,amount)=>{setOrders(p=>p.map(o=>{if(o.id!==id)return o;const total=calc(o.items).total;const paid=Math.max(0,Math.min(total,paidAmt(o)+(Number(amount)||0)));return{...o,paid,ps:paid>=total?'paid':'pending'}}));setView(v=>v&&v.type==='detail'&&v.o.id===id?(()=>{const total=calc(v.o.items).total;const paid=Math.max(0,Math.min(total,paidAmt(v.o)+(Number(amount)||0)));return{...v,o:{...v.o,paid,ps:paid>=total?'paid':'pending'}}})():v);showToast('✓ Төлбөр шинэчлэгдлээ')};
 const copyOrder=o=>{const{d,t}=today();const newO={...o,id:genId(),status:'new',ps:'pending',paid:0,d,t};setOrders(p=>[newO,...p]);setView({type:'detail',o:newO});showToast('✓ Захиалга хуулагдлаа!')};
 const saveProfile=u=>{setUsers(p=>p.map(x=>x.id===u.id?u:x));setUser(u);showToast('✓ Миний мэдээлэл шинэчлэгдлээ')};
+const setUsersLocal=updater=>{markLocalEdit();setUsers(updater)};
 const updateCategories=updater=>setCategories(prev=>{const base=Array.isArray(prev)?prev:CATS;const next=typeof updater==='function'?updater(base):updater;clearTimeout(saveTimer.current);queueSaveData({...getData(),categories:next}).catch(()=>showToast('Ангилал хадгалахад алдаа гарлаа'));return next});
 const navFns={profile:()=>setView({type:'profile'}),products:()=>isAdmin(user)?setView({type:'products'}):showToast('Барааны тохиргоо зөвхөн Admin эрхтэй.'),customers:()=>setView({type:'customers'}),categories:()=>isAdmin(user)?setView({type:'categories'}):showToast('Ангилал өөрчлөх эрх зөвхөн Admin-д байна.'),users:()=>setView({type:'users'}),invoices:()=>setView({type:'invoices'}),company:()=>canManageSettings(user)?setView({type:'company'}):showToast('Компанийн мэдээлэл өөрчлөх эрхгүй.'),tax:()=>canManageSettings(user)?setView({type:'tax'}):showToast('Татварын тохиргоо өөрчлөх эрхгүй.'),security:()=>setView({type:'security'}),backup:()=>canManageSettings(user)?setView({type:'backup'}):showToast('Нөөцлөлт хийх эрхгүй.')};
 const back=()=>setView(null);const vt=view?.type;
@@ -345,7 +347,7 @@ return(<div style={{...W2,position:'relative'}} onTouchStart={touchStart} onTouc
  vt==='products'?<ProductsScreen products={products} setProducts={setProducts} categories={categories} back={back}/>:
  vt==='customers'?<CustomersScreen custs={custs} setCusts={setCusts} back={back}/>:
  vt==='categories'?<CategoriesScreen categories={categories} setCategories={updateCategories} products={products} back={back}/>:
- vt==='users'?<UsersScreen users={users} setUsers={setUsers} currentUser={user} back={back} notify={showToast}/>:
+ vt==='users'?<UsersScreen users={users} setUsers={setUsersLocal} currentUser={user} back={back} notify={showToast}/>:
  vt==='profile'?<ProfileScreen user={user} onSave={saveProfile} back={back}/>:
  vt==='invoices'?<InvoicesScreen orders={visibleOrders} custs={custs} back={back}/>:
  vt==='company'?<CompanyScreen back={back}/>:
