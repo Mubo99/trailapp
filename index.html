@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.30.0/tabler-icons.min.css">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#dde3f0;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif}
+    body{background:#dde3f0;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;overscroll-behavior-y:contain}
     #root{max-width:430px;margin:0 auto;min-height:100vh;box-shadow:0 0 40px rgba(0,0,0,.12)}
     button{font-family:inherit;-webkit-tap-highlight-color:transparent}
     input,textarea,select{font-family:inherit;font-size:16px}
@@ -18,6 +18,7 @@
     .input-sm{width:100%;border:0.5px solid #e2e5eb;border-radius:8px;padding:8px 10px;font-size:14px;outline:none;font-family:inherit;background:#fff;color:#111827;box-sizing:border-box}
     .input-sm:focus{border-color:#2352DC}
     @media print{.no-print{display:none!important}.print-only{display:block!important}}
+    @keyframes pullspin{to{transform:rotate(360deg)}}
     .print-only{display:none}
   </style>
 </head>
@@ -299,7 +300,7 @@ function App(){
 const[user,setUser]=useState(null);const loggedIn=!!user;const[tab,setTab]=useState('home');
 const[orders,setOrders]=useState(INIT_ORDERS);const[products,setProducts]=useState(INIT_PRODS);const[custs,setCusts]=useState(INIT_CUSTS);const[categories,setCategories]=useState(CATS);
 const[users,setUsers]=useState(INIT_USERS);
-const[view,setView]=useState(null);const[toast,setToast]=useState(null);
+const[view,setView]=useState(null);const[toast,setToast]=useState(null);const[pull,setPull]=useState({start:null,y:0,refreshing:false});
 const[dbReady,setDbReady]=useState(false);const clientId=useRef(Math.random().toString(36).slice(2));const applyingRemote=useRef(false);const saveTimer=useRef(null);
 const scopeSp=userSalesperson(user);const visibleOrders=scopeSp?orders.filter(o=>o.sp===scopeSp):orders;
 const showToast=msg=>{setToast(msg);setTimeout(()=>setToast(null),2500)};
@@ -307,6 +308,11 @@ const applyData=data=>{const nextUsers=(data.users||INIT_USERS).map(normalizeUse
 const serializeUsers=()=>users.map(u=>{const clean={...u};if(requireSupabaseAuth())delete clean.passcode;return clean});
 const getData=()=>({orders,products,custs,categories,users:serializeUsers()});
 const getSupabase=getSupabaseClient;
+const refreshData=async()=>{if(pull.refreshing)return;setPull({start:null,y:56,refreshing:true});try{const sb=getSupabase();if(sb){const{data}=await sb.from('app_state').select('data').eq('id','main').maybeSingle();if(data?.data)applyData(data.data)}else{const r=await fetch('/api/db?ts='+Date.now());const data=await r.json();if(data&&!data.empty)applyData(data)}showToast('✓ Дата шинэчлэгдлээ')}catch(_){showToast('Дата шинэчлэхэд алдаа гарлаа')}finally{setTimeout(()=>setPull({start:null,y:0,refreshing:false}),320)}};
+const atTop=()=>((window.scrollY||document.documentElement.scrollTop||0)<=0);
+const touchStart=e=>{if(!loggedIn||pull.refreshing)return;if(atTop())setPull(p=>({...p,start:e.touches[0].clientY,y:0}))};
+const touchMove=e=>{if(pull.start==null||pull.refreshing)return;const dy=e.touches[0].clientY-pull.start;if(dy>0&&atTop()){if(dy>18)e.preventDefault?.();setPull(p=>({...p,y:Math.min(86,dy*.55)}))}else if(dy<0)setPull({start:null,y:0,refreshing:false})};
+const touchEnd=()=>{if(pull.refreshing)return;const y=pull.y;if(y>=52)refreshData();else setPull({start:null,y:0,refreshing:false})};
 useEffect(()=>{let alive=true;const sb=getSupabase();if(sb){(async()=>{const{data,error}=await sb.from('app_state').select('data').eq('id','main').maybeSingle();if(!alive)return;if(data?.data)applyData(data.data);else await sb.from('app_state').upsert({id:'main',data:getData(),updated_at:new Date().toISOString()});setDbReady(true)})();const ch=sb.channel('order-app-state').on('postgres_changes',{event:'*',schema:'public',table:'app_state',filter:'id=eq.main'},payload=>{const next=payload.new?.data;if(next)applyData(next)}).subscribe();return()=>{alive=false;sb.removeChannel(ch)}}fetch('/api/db').then(r=>r.json()).then(data=>{if(!alive)return;if(data&&!data.empty)applyData(data);setDbReady(true)}).catch(()=>setDbReady(true));const es=new EventSource('/api/events');es.onmessage=e=>{try{const msg=JSON.parse(e.data);if(msg.source===clientId.current)return;applyData(msg.data||{})}catch(_){}};es.onerror=()=>{};return()=>{alive=false;es.close()}},[]);
 useEffect(()=>{if(!loggedIn||!requireSupabaseAuth())return;let alive=true;const sb=getSupabase();if(!sb)return;(async()=>{const{data}=await sb.from('app_state').select('data').eq('id','main').maybeSingle();if(!alive)return;if(data?.data)applyData(data.data);setDbReady(true)})();return()=>{alive=false}},[loggedIn]);
 useEffect(()=>{if(!dbReady||applyingRemote.current)return;clearTimeout(saveTimer.current);saveTimer.current=setTimeout(()=>{const data=getData();const sb=getSupabase();if(sb)sb.from('app_state').upsert({id:'main',data,updated_at:new Date().toISOString()}).catch?.(()=>{});else fetch('/api/db',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({source:clientId.current,data})}).catch(()=>{})},250);return()=>clearTimeout(saveTimer.current)},[dbReady,orders,products,custs,categories,users]);
@@ -320,8 +326,9 @@ const navFns={profile:()=>setView({type:'profile'}),products:()=>isAdmin(user)?s
 const back=()=>setView(null);const vt=view?.type;
 const W2={maxWidth:430,margin:'0 auto',background:BG,fontFamily:"-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif",minHeight:'100vh'};
 if(!loggedIn)return <div style={W2}><LoginScreen users={users} onLogin={setUser}/><InstallPrompt/></div>;
-return(<div style={W2}>
+return(<div style={{...W2,position:'relative'}} onTouchStart={touchStart} onTouchMove={touchMove} onTouchEnd={touchEnd} onTouchCancel={touchEnd}>
 <InstallPrompt/>
+{(pull.y>0||pull.refreshing)&&<div className="no-print" style={{position:'fixed',top:'calc(env(safe-area-inset-top) + 8px)',left:'50%',transform:`translate(-50%,${Math.min(70,pull.refreshing?56:pull.y)}px)`,zIndex:9999,background:W,border:`0.5px solid ${BD}`,borderRadius:999,padding:'8px 12px',display:'flex',alignItems:'center',gap:7,boxShadow:'0 10px 28px rgba(15,23,42,.16)',color:B,fontSize:12,fontWeight:800,pointerEvents:'none',transition:pull.refreshing?'transform .18s ease':'none'}}><i className="ti ti-refresh" style={{fontSize:16,animation:pull.refreshing?'pullspin .8s linear infinite':'none'}}/>{pull.refreshing?'Шинэчилж байна':'Доош татаж шинэчлэх'}</div>}
 {toast&&<div style={{background:'#15803d',color:'#fff',padding:'11px 20px',textAlign:'center',fontSize:13,fontWeight:600}}>{toast}</div>}
 {vt==='new'?<NewOrderScreen onSave={addOrder} back={back} products={products} custs={custs} user={user}/>:
  vt==='edit'?<NewOrderScreen onSave={addOrder} onUpdate={updateOrder} back={back} products={products} custs={custs} editOrder={view.o} user={user}/>:
