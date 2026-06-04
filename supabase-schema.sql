@@ -9,19 +9,25 @@ alter table public.app_state enable row level security;
 drop policy if exists "app_state_select" on public.app_state;
 drop policy if exists "app_state_insert" on public.app_state;
 drop policy if exists "app_state_update" on public.app_state;
+drop policy if exists "authenticated_app_state_select" on public.app_state;
+drop policy if exists "authenticated_app_state_insert" on public.app_state;
+drop policy if exists "authenticated_app_state_update" on public.app_state;
 
-create policy "app_state_select"
+create policy "authenticated_app_state_select"
 on public.app_state for select
-using (true);
+to authenticated
+using ((select auth.uid()) is not null);
 
-create policy "app_state_insert"
+create policy "authenticated_app_state_insert"
 on public.app_state for insert
-with check (true);
+to authenticated
+with check ((select auth.uid()) is not null);
 
-create policy "app_state_update"
+create policy "authenticated_app_state_update"
 on public.app_state for update
-using (true)
-with check (true);
+to authenticated
+using ((select auth.uid()) is not null)
+with check ((select auth.uid()) is not null);
 
 do $$
 begin
