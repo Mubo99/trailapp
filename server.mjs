@@ -1,5 +1,5 @@
 import { createReadStream, existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rename, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,6 +13,7 @@ const types = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml; charset=utf-8",
   ".md": "text/markdown; charset=utf-8",
 };
@@ -25,12 +26,20 @@ async function readBody(request) {
 
 async function readDb() {
   if (!existsSync(dbPath)) return null;
-  return JSON.parse(await readFile(dbPath, "utf8"));
+  const raw = await readFile(dbPath, "utf8");
+  if (!raw.trim()) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 async function writeDb(data) {
   const payload = { ...data, updatedAt: new Date().toISOString() };
-  await writeFile(dbPath, JSON.stringify(payload, null, 2), "utf8");
+  const tempPath = `${dbPath}.tmp`;
+  await writeFile(tempPath, JSON.stringify(payload, null, 2), "utf8");
+  await rename(tempPath, dbPath);
   return payload;
 }
 

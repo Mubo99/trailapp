@@ -1,0 +1,25 @@
+{
+  "name": "Захиалгын систем",
+  "short_name": "Захиалга",
+  "description": "Борлуулалт, захиалга, төлбөрийн дотоод хэрэглээний app",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f2f4f8",
+  "theme_color": "#2352DC",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/batmon-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/batmon-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
